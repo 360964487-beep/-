@@ -1,0 +1,18 @@
+{
+  "name": "workflow-document-manager",
+  "version": "1.0.0",
+  "description": "工作流文档管理 Windows 桌面应用",
+  "main": "main.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-packager . WorkflowDocumentManager --platform=win32 --arch=x64 --out=dist --overwrite --asar --prune=true --icon=app.ico --ignore=\"^/node_modules($|/)\" --ignore=\"^/dist($|/)\" --ignore=\"^/package-lock.json$\" --ignore=\"^/generate-icon.js$\" --ignore=\"^/app-icon.svg$\" --ignore=\"^/app.png$\" --app-version=1.0.0 --win32metadata.CompanyName=WorkflowTools --win32metadata.FileDescription=工作流文档管理 --win32metadata.ProductName=工作流文档管理"
+  },
+  "devDependencies": {
+    "@electron/packager": "latest",
+    "electron": "latest",
+    "png-to-ico": "^3.0.2",
+    "pngjs": "^7.0.0"
+  }
+}

@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>工作流文档管理</title>
+    <link rel="manifest" href="data:application/manifest+json,{
+        \"name\": \"多文档管理工具\",
+        \"short_name\": \"多文档\",
+        \"start_url\": \".\",
+        \"display\": \"standalone\",
+        \"theme_color\": \"#eeede9\",
+        \"background_color\": \"#eeede9\",
+        \"icons\": [
+            {
+                \"src\": \"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Ctext x='50' y='67' font-size='55' text-anchor='middle' fill='white' font-family='Arial'%3E📄%3C/text%3E%3C/svg%3E\",
+                \"sizes\": \"any\",
+                \"type\": \"image/svg+xml\"
+            }
+        ]
+    }">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="多文档管理">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Ctext x='50' y='67' font-size='55' text-anchor='middle' fill='white' font-family='Arial'%3E📄%3C/text%3E%3C/svg%3E">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Roboto,system-ui,sans-serif; background:#f8fafc; color:#0f172a; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+        #instance-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; font-family:'Segoe UI',Roboto,sans-serif; }
+        #instance-overlay .message { background:white; padding:40px 50px; border-radius:20px; max-width:450px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+        #instance-overlay .message h2 { font-size:22px; margin-bottom:12px; color:#0f172a; }
+        #instance-overlay .message p { font-size:15px; color:#475569; margin-bottom:20px; }
+        #instance-overlay .message .close-btn { background:#3b82f6; color:white; border:none; padding:8px 24px; border-radius:10px; font-size:15px; cursor:pointer; }
+        .toolbar { background:#fff; padding:8px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; border-bottom:1px solid #e2e8f0; z-index:10; }
+        .tool-group { display:flex; align-items:center; gap:8px; background:#f8fafc; padding:4px 10px; border-radius:40px; border:1px solid #e2e8f0; }
+        .tool-group label { font-size:12px; font-weight:500; color:#334155; }
+        select, button { background:white; border:1px solid #cbd5e1; border-radius:8px; padding:4px 10px; font-size:12px; cursor:pointer; font-family:inherit; color:#1e293b; }
+        button { background:#f1f5f9; font-weight:500; }
+        button:active { transform:scale(0.97); }
+        select:hover, button:hover { background:#e2e8f0; border-color:#94a3b8; }
+        .btn-primary { background:#3b82f6; border-color:#3b82f6; color:white; }
+        .btn-primary:hover { background:#2563eb; }
+        .btn-secondary { background:#10b981; border-color:#10b981; color:white; }
+        .btn-secondary:hover { background:#059669; }
+        .color-orange { background:#f97316; border-color:#f97316; color:white; }
+        .color-blue { background:#3b82f6; border-color:#3b82f6; color:white; }
+        .color-black { background:#1e293b; border-color:#1e293b; color:white; }
+        .color-deep-purple { background:#8b5cf6; border-color:#8b5cf6; color:white; }
+        .separator { width:1px; height:24px; background:#e2e8f0; margin:0 4px; }
+        .app-container { display:flex; flex:1; overflow:hidden; padding:16px 20px; gap:20px; }
+        .docs-sidebar { width:300px; background:white; border-radius:20px; display:flex; flex-direction:column; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+        .sidebar-header { padding:12px 14px; border-bottom:1px solid #e2e8f0; display:flex; flex-direction:column; gap:10px; background:#fefefe; }
+        .add-doc-btn { background:#f1f5f9; color:#1e293b; border-color:#cbd5e1; padding:8px; width:100%; text-align:center; }
+        .add-doc-btn:hover { background:#e2e8f0; }
+        .docs-list { flex:1; overflow-y:auto; padding:8px; }
+        .doc-item { background:#fff; margin:6px 4px; padding:6px 10px; border-radius:14px; display:flex; align-items:center; justify-content:space-between; border:1px solid #e2e8f0; cursor:grab; user-select:none; }
+        .doc-item:active { cursor:grabbing; }
+        .doc-item.drag-over { border-top:2px solid #3b82f6; margin-top:-2px; }
+        .doc-item.active { background:#eff6ff; border-color:#3b82f6; }
+        .doc-title { font-weight:400; font-size:11px; flex:1; margin-right:6px; pointer-events:auto; cursor:pointer; color:#0f172a; padding:2px 4px; border-radius:4px; }
+        .doc-title:hover { background:#f1f5f9; }
+        .doc-title .hint { font-weight:400; color:#94a3b8; font-size:10px; margin-left:6px; }
+        .right-workspace { flex:1; display:flex; overflow:hidden; }
+        .main-doc-area { flex:1; background:white; border-radius:20px; display:flex; flex-direction:column; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+        .section-header { padding:10px 16px; background:#fefefe; border-bottom:2px solid #eef2f6; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center; color:#0f172a; }
+        .section-header button { background:none; border:none; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:8px; color:#475569; }
+        .section-header button:hover { background:#e2e8f0; }
+        .blocks-container { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+        .doc-block { background:#fff; border-radius:12px; border:1px solid #e2e8f0; transition:0.1s; position:relative; user-select:none; }
+        .doc-block.drag-over { border-top:2px solid #3b82f6; margin-top:-2px; }
+        .doc-block.locked { background:#f8fafc; opacity:0.9; }
+        .block-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f9fafb; border-bottom:1px solid #eef2f6; border-radius:12px 12px 0 0; }
+        .drag-handle { cursor:grab; margin-right:8px; font-size:14px; color:#94a3b8; user-select:none; }
+        .drag-handle:active { cursor:grabbing; }
+        .block-title { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:500; color:#1e293b; flex:1; }
+        .block-title .block-name { cursor:text; padding:2px 4px; border-radius:6px; min-width:60px; background:#f9fafb; color:#0f172a; border:1px solid transparent; }
+        .block-title .block-name:focus { background:#fff; outline:none; border-color:#cbd5e1; color:#0f172a; }
+        .block-actions { display:flex; gap:6px; }
+        .block-actions button { background:transparent; border:none; font-size:12px; cursor:pointer; padding:2px 6px; border-radius:8px; color:#64748b; pointer-events:auto; }
+        .block-actions button:hover { background:#e2e8f0; color:#0f172a; }
+        .block-content { padding:12px; outline:none; min-height:80px; color:#0f172a; user-select:text; }
+        .block-content { font-family:inherit; font-size:14px; line-height:1.7; }
+        .block-content font[size="1"] { font-size:10px; }
+        .block-content font[size="2"] { font-size:12px; }
+        .block-content font[size="3"] { font-size:14px; }
+        .block-content font[size="4"] { font-size:16px; }
+        .block-content font[size="5"] { font-size:18px; }
+        .block-content font[size="6"] { font-size:24px; }
+        .block-content font[size="7"] { font-size:32px; }
+        .doc-block.collapsed .block-content { display:none; }
+        .doc-block.locked .block-content { background-color:#f8fafc; cursor:default; }
+        .toast-message { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1e293b; color:#f1f5f9; padding:6px 16px; border-radius:40px; font-size:12px; z-index:999; opacity:0.9; pointer-events:none; border:1px solid #475569; }
+        .btn-underline { text-decoration:underline; text-decoration-color:#8b5cf6; }
+        /* 自定义右键菜单 */
+        .context-menu { position:fixed; background:white; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.15); padding:6px 0; min-width:160px; z-index:10000; display:none; }
+        .context-menu-item { padding:8px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:10px; color:#1e293b; }
+        .context-menu-item:hover { background:#f1f5f9; }
+        .context-menu-item .icon { font-size:16px; }
+        .context-menu-divider { height:1px; background:#e2e8f0; margin:4px 8px; }
+        .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.48); z-index:11000; display:none; align-items:center; justify-content:center; }
+        .rename-dialog { width:min(420px,calc(100vw - 40px)); background:#fff; border-radius:18px; padding:22px; box-shadow:0 24px 70px rgba(15,23,42,0.28); }
+        .rename-dialog h2 { font-size:17px; margin-bottom:14px; }
+        .rename-dialog input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font:14px inherit; outline:none; }
+        .rename-dialog input:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.16); }
+        .rename-dialog-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+        .rename-dialog-actions button { padding:7px 18px; }
+        @media (max-width:800px) { .app-container { padding:12px; gap:12px; } .docs-sidebar { width:260px; } }
+
+        /* 轻量现代风格：收起多层描边，让文档内容成为视觉主体 */
+        :root { color-scheme:light; --accent:#725cf4; --accent-soft:#efedff; --ink:#28263a; --muted:#8b899b; --line:#eeedf3; }
+        body { background:#f6f5fa; color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; }
+        .toolbar { padding:10px 22px; gap:10px 18px; background:rgba(255,255,255,.94); border-bottom:1px solid #efedf4; box-shadow:0 2px 12px rgba(38,31,74,.035); }
+        .workspace-switcher { display:flex; flex:0 0 auto; gap:8px; padding:10px 22px 0; background:#eeede9; }
+        .workspace-switch { flex:1; min-height:48px; border:1px solid #deddd8; border-radius:12px 12px 0 0; background:#e7e6e1; color:#65666f; font-size:15px; font-weight:600; box-shadow:none; }
+        .workspace-switch:hover { background:#e1e0dc; color:#4d4e56; }
+        .workspace-switch.active { border-color:#85899d; background:#85899d; color:#fff; }
+        .workspace-switch.active:hover { background:#777c91; color:#fff; }
+        .tool-group { gap:6px; background:transparent; padding:0; border:0; }
+        .tool-group label { color:#777589; }
+        .separator { height:20px; background:#e9e7ef; margin:0 2px; }
+        select,button { border:1px solid transparent; border-radius:10px; padding:7px 11px; background:#f3f2f8; color:#555268; transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease; }
+        button { font-weight:500; }
+        select:hover,button:hover { background:#ebe9f4; border-color:transparent; color:#332d55; }
+        .btn-primary { background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 4px 10px rgba(114,92,244,.16); }
+        .btn-primary:hover { background:#6148e5; color:#fff; }
+        .btn-secondary { background:#e9f5f0; color:#397e64; border-color:transparent; }
+        .btn-secondary:hover { background:#dff0e9; color:#286b52; }
+        .color-orange,.color-blue,.color-black,.color-deep-purple { border:0; border-radius:9px; padding:6px 10px; }
+        .color-orange { background:#fff0e5; color:#c66c2f; }
+        .color-orange:hover { background:#ffe5d3; color:#aa5824; }
+        .color-blue { background:#e8f0ff; color:#4474cb; }
+        .color-blue:hover { background:#dce8ff; color:#315fae; }
+        .color-black { background:#efeff2; color:#454451; }
+        .color-black:hover { background:#e5e4e9; color:#292833; }
+        .color-deep-purple { background:#efebff; color:#7558cf; }
+        .color-deep-purple:hover { background:#e5deff; color:#6042bd; }
+        .toolbar > div:last-child { color:#9996a7 !important; font-size:10px !important; }
+        .app-container { padding:18px 22px; gap:22px; }
+        .docs-sidebar { width:258px; flex:0 0 258px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+        .sidebar-header { padding:0 4px 12px; background:transparent; border:0; }
+        .add-doc-btn { width:auto; align-self:flex-start; padding:9px 13px; border:0; border-radius:11px; background:var(--accent); color:#fff; box-shadow:0 5px 12px rgba(114,92,244,.16); }
+        .add-doc-btn:hover { background:#6148e5; color:#fff; }
+        .docs-list { padding:2px 0; }
+        .doc-item { position:relative; margin:3px 0; padding:10px 12px; border:0; border-radius:12px; background:transparent; }
+        .doc-item:hover { background:#eeedf5; }
+        .doc-item.active { background:var(--accent-soft); color:#5543b8; }
+        .doc-title { padding:2px 0; color:#48465b; font-size:13px; }
+        .doc-item.active .doc-title { color:#5745bd; }
+        .doc-title:hover { background:transparent; }
+        .right-workspace { min-width:0; }
+        .main-doc-area { border:0; border-radius:18px; background:#fff; box-shadow:0 12px 36px rgba(39,32,77,.055); }
+        .section-header { padding:15px 20px; background:transparent; border-bottom:1px solid #f0eef5; color:#39364d; font-size:14px; }
+        .section-header button { min-width:34px; background:#f4f3f8; color:#777389; }
+        .section-header button:hover { background:var(--accent-soft); color:#5d49c4; }
+        .blocks-container { padding:10px 24px 22px; gap:0; }
+        .doc-block { border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; transition:background .18s ease; }
+        .doc-block:last-child { border-bottom:0; }
+        .doc-block:hover { background:#fdfcff; }
+        .doc-block.locked { background:#fbfafc; opacity:1; }
+        .block-header { padding:12px 6px 7px; background:transparent; border:0; border-radius:0; }
+        .drag-handle { color:#b1afbd; font-size:13px; }
+        .block-title { gap:6px; color:#777489; }
+        .block-title .block-name { padding:3px 2px; border:0; border-radius:0; border-bottom:1px solid transparent; background:transparent; color:#5a566e; }
+        .block-title .block-name:focus { border-color:#b6aafa; background:transparent; color:#322b52; outline:0; }
+        .block-actions { gap:3px; }
+        .block-actions button { width:30px; height:30px; padding:0; border-radius:9px; color:#8b889a; }
+        .block-actions button:hover { background:#efedff; color:#5d49c4; }
+        .block-content { min-height:68px; padding:8px 12px 18px; border-radius:10px; color:#343143; }
+        .doc-block.locked .block-content { background:#faf9fc; }
+        .toast-message { background:#302b49; border:0; box-shadow:0 8px 24px rgba(38,31,74,.2); }
+        .context-menu { border:1px solid #efedf4; border-radius:14px; box-shadow:0 14px 38px rgba(39,32,77,.14); }
+        .context-menu-item { border-radius:8px; margin:2px 5px; color:#454258; }
+        .context-menu-item:hover { background:#f2f0ff; }
+        .context-menu-divider { background:#efedf4; }
+        .rename-dialog { border-radius:20px; box-shadow:0 24px 70px rgba(39,32,77,.2); }
+        .rename-dialog h2 { color:#39364d; }
+        .rename-dialog input { border-color:#e8e6ef; border-radius:11px; }
+        .rename-dialog input:focus { border-color:#a99af7; box-shadow:0 0 0 3px rgba(114,92,244,.13); }
+        @media(max-width:800px) {
+          .app-container { padding:12px 14px; gap:14px; }
+          .docs-sidebar { width:210px; flex-basis:210px; }
+          .toolbar > div:last-child { display:none; }
+        }
+        @media(max-width:620px) {
+          body { height:100dvh; }
+          .toolbar { padding:8px 10px; gap:7px; }
+          .toolbar .tool-group { flex-wrap:wrap; }
+          .tool-group button { padding:6px 8px; }
+          .app-container { flex-direction:column; padding:10px 10px calc(10px + env(safe-area-inset-bottom)); gap:8px; }
+          .docs-sidebar { width:100%; flex:0 0 auto; max-height:128px; }
+          .sidebar-header { padding:0 2px 5px; }
+          .add-doc-btn { padding:7px 10px; }
+          .docs-list { display:flex; gap:4px; overflow:auto; padding:0 0 5px; }
+          .doc-item { flex:0 0 auto; width:auto; margin:0; padding:8px 11px; }
+          .right-workspace { flex:1; min-height:0; }
+          .main-doc-area { border-radius:15px; }
+          .section-header { padding:12px 14px; }
+          .blocks-container { padding:8px 14px 16px; }
+        }
+                            /* 低饱和莫兰迪主题：灰紫、雾蓝与柔和石色 */
+        :root { color-scheme:light; --accent:#85899d; --accent-soft:#e9e9ed; --ink:#44454b; --muted:#929198; --line:#e9e7e3; }
+        body { background:#eeede9; color:var(--ink); }
+        .toolbar { background:#f8f7f4; border-bottom-color:#e5e3de; box-shadow:0 2px 10px rgba(76,72,62,.045); }
+        .workspace-switcher { background:#eeede9; }
+        .tool-group label, .toolbar > div:last-child { color:#929087 !important; }
+        .separator { background:#e4e1da; }
+        select, button { background:#eae9e4; color:#575851; }
+        select:hover, button:hover { background:#deded7; color:#44463f; }
+        .toolbar select { border:1px solid #deddd6; border-radius:9px; }
+        .toolbar .toolbar-action { min-height:34px; padding:7px 13px; border:0; border-radius:9px; background:#e8e7e1; color:#55564f; box-shadow:none; font-weight:500; }
+        .toolbar .toolbar-action:hover { background:#dcdcd4; color:#41433d; }
+        .btn-primary, .add-doc-btn { background:#85899d; color:#fff; box-shadow:0 3px 8px rgba(94,96,123,.15); }
+        .btn-primary:hover, .add-doc-btn:hover { background:#74798f; color:#fff; }
+        .btn-secondary { background:#e6e6e8; color:#62636b; }
+        .btn-secondary:hover { background:#dcdddf; color:#4d4f57; }
+        .color-orange { background:#eee5df; color:#9b7060; }
+        .color-orange:hover { background:#e7d9d1; color:#865f51; }
+        .color-blue { background:#e2e8eb; color:#647e8e; }
+        .color-blue:hover { background:#d8e1e5; color:#536f80; }
+        .color-black { background:#e6e5e2; color:#555650; }
+        .color-black:hover { background:#dcdbd6; color:#42433e; }
+        .color-deep-purple { background:#e8e3e9; color:#817487; }
+        .color-deep-purple:hover { background:#ded8e1; color:#6f6276; }
+        .docs-sidebar { width:155px; flex:0 0 155px; color:var(--ink); }
+        .doc-item { min-width:0; }
+        .doc-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .doc-item:hover { background:#e9e8e2; }
+        .doc-item.active { background:#e4e4e8; color:#625f78; }
+        .doc-item.active .doc-title { color:#625f78; }
+        .main-doc-area { background:#faf9f6; box-shadow:0 10px 30px rgba(76,72,62,.06); }
+        .section-header { border-color:#ebe8e2; color:#4d4e48; }
+        .section-header button { background:#eae9e4; color:#696a63; }
+        .section-header button:hover { background:#e0e2da; color:#596052; }
+        .doc-block { border-color:#e8e5df; }
+        .doc-block:hover { background:#f6f5f1; }
+        .doc-block.locked { background:#f4f3ef; }
+        .block-title { color:#84847d; }
+        .block-title .block-name { color:#55564f; }
+        .block-title .block-name:focus { border-color:#aeb4a8; color:#41443e; }
+        .block-actions button:hover { background:#e8e9e3; color:#5e675b; }
+        .block-content { color:#484944; }
+        .doc-block.locked .block-content { background:#f4f3ef; }
+        .toast-message { background:#575951; border:0; box-shadow:0 8px 22px rgba(76,72,62,.18); }
+        .context-menu { border-color:#e6e3dc; }
+        .context-menu-item { color:#55564f; }
+        .context-menu-item:hover { background:#eeede8; }
+        .context-menu-divider { background:#e8e5df; }
+        .rename-dialog h2 { color:#4d4e48; }
+        .rename-dialog input { border-color:#dfddd6; }
+        .rename-dialog input:focus { border-color:#a8afa0; box-shadow:0 0 0 3px rgba(133,139,130,.14); }
+        @media(max-width:800px) { .docs-sidebar { width:126px; flex-basis:126px; } }
+        @media(max-width:620px) { .docs-sidebar { width:100%; flex:0 0 auto; } }
+        .unified-text-style .block-name {
+          font-family:Arial, sans-serif !important;
+          font-size:12px !important;
+        }
+        .unified-text-style .block-content,
+        .unified-text-style .block-content * {
+          font-family:"FangSong", "仿宋_GB2312", STFangsong, serif !important;
+          font-size:14px !important;
+          line-height:1.8 !important;
+        }
+        .toolbar .style-toggle[aria-pressed="true"] { background:#85899d; color:#fff; }
+        .toolbar .style-toggle[aria-pressed="true"]:hover { background:#74798f; color:#fff; }
+        .category-sidebar { width:126px; flex:0 0 126px; display:flex; flex-direction:column; min-width:0; }
+        .app-container.simple-mode .category-sidebar { display:none; }
+        .category-sidebar-header { padding:0 0 10px; border:0; background:transparent; }
+        .sidebar-header .add-doc-btn { width:100%; min-height:34px; align-self:stretch; padding:7px 8px; border:0; border-radius:9px; background:transparent; color:#73788d; box-shadow:none; font-size:12px; font-weight:500; text-align:center; }
+        .sidebar-header .add-doc-btn:hover { background:transparent; color:#555b73; }
+        .categories-list { display:flex; flex-direction:column; gap:3px; overflow:auto; padding:2px 0; }
+        .category-item { width:100%; min-width:0; padding:9px 10px; border:0; border-radius:10px; background:transparent; color:#696a73; text-align:left; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+        .category-item:hover { background:#e9e8e2; }
+        .category-item.active { background:#e4e4e8; color:#625f78; }
+        .inline-name-editor { box-sizing:border-box; min-width:0; width:100%; padding:5px 7px; border:1px solid #aeb2c2; border-radius:7px; outline:none; background:#faf9f6; color:#44454b; font:inherit; }
+        .inline-name-editor:focus { box-shadow:0 0 0 2px rgba(133,137,157,.15); }
+        .category-empty { padding:12px 8px; color:#9a9991; font-size:12px; text-align:center; }
+        .docs-sidebar { width:155px; flex:0 0 155px; }
+        @media(max-width:800px) { .category-sidebar { width:105px; flex-basis:105px; } .docs-sidebar { width:126px; flex-basis:126px; } }
+        @media(max-width:620px) {
+          .workspace-switcher { padding:7px 10px 0; gap:6px; }
+          .workspace-switch { min-height:42px; font-size:13px; }
+          .category-sidebar { width:100%; flex:0 0 auto; max-height:66px; }
+          .category-sidebar-header { flex-direction:row; align-items:center; gap:8px; padding:0 2px 4px; }
+          .sidebar-header .add-doc-btn { width:auto; min-height:26px; align-self:auto; padding:4px 8px; }
+          .categories-list { flex-direction:row; gap:4px; overflow:auto; }
+          .category-item { width:auto; flex:0 0 auto; padding:6px 10px; }
+        }
+        /* 工作流空间采用清新淡雅的浅绿与雾白配色 */
+        body.workflow-mode { background:#f2f6f3; color:#3d514a; }
+        body.workflow-mode .toolbar { background:#fbfdfb; border-bottom-color:#e1ebe5; box-shadow:0 2px 12px rgba(57,91,73,.05); }
+        body.workflow-mode .workspace-switcher { background:#f2f6f3; }
+        body.workflow-mode .workspace-switch { border-color:#dce8e1; background:#e8f0eb; color:#71847a; }
+        body.workflow-mode .workspace-switch:hover { background:#dfeae3; color:#4e685a; }
+        body.workflow-mode .workspace-switch.active { border-color:#8eafa0; background:#8eafa0; color:#fff; box-shadow:0 3px 10px rgba(97,139,116,.14); }
+        body.workflow-mode .tool-group label,
+        body.workflow-mode .toolbar > div:last-child { color:#8b9b90 !important; }
+        body.workflow-mode .separator { background:#e2ebe5; }
+        body.workflow-mode select,
+        body.workflow-mode .toolbar .toolbar-action { border-color:#e0e9e3; background:#edf3ef; color:#566e60; }
+        body.workflow-mode select:hover,
+        body.workflow-mode .toolbar .toolbar-action:hover { background:#e2ece5; color:#3d5b49; }
+        body.workflow-mode .btn-primary,
+        body.workflow-mode .toolbar .style-toggle[aria-pressed="true"] { border-color:#8eafa0; background:#8eafa0; color:#fff; box-shadow:0 3px 10px rgba(97,139,116,.14); }
+        body.workflow-mode .app-container { background:radial-gradient(ellipse at 75% 0%,rgba(221,237,226,.48),transparent 48%),#f2f6f3; }
+        body.workflow-mode .docs-sidebar { color:#52665a; }
+        body.workflow-mode .doc-item:hover { background:#e8f0eb; }
+        body.workflow-mode .doc-item.active { background:#e3eee7; color:#527562; box-shadow:inset 2px 0 #8eafa0; }
+        body.workflow-mode .doc-title,
+        body.workflow-mode .doc-item.active .doc-title { color:#52665a; }
+        body.workflow-mode .main-doc-area { background:#fffefa; box-shadow:0 10px 30px rgba(65,92,73,.07); }
+        body.workflow-mode .section-header { color:#465b4e; border-color:#e5ece6; }
+        body.workflow-mode .section-header button { background:#edf3ef; color:#718477; }
+        body.workflow-mode .section-header button:hover { background:#e1ece4; color:#527562; }
+        body.workflow-mode .doc-block { border-color:#e5ece6; }
+        body.workflow-mode .doc-block:hover { background:#fbfdfb; }
+        body.workflow-mode .doc-block.locked,
+        body.workflow-mode .doc-block.locked .block-content { background:#f4f7f3; }
+        body.workflow-mode .block-title { color:#86958a; }
+        body.workflow-mode .block-title .block-name { color:#52665a; }
+        body.workflow-mode .block-title .block-name:focus { border-color:#a8c0b1; color:#3e5e49; }
+        body.workflow-mode .block-actions button { color:#8b9b90; }
+        body.workflow-mode .block-actions button:hover { background:#e8f0eb; color:#527562; }
+        body.workflow-mode .block-content { color:#4b594f; }
+        body.workflow-mode .toast-message { background:#526b5b; color:#fff; border:1px solid #789382; }
+        body.workflow-mode .context-menu { background:#fffefa; border-color:#e3ebe5; }
+        body.workflow-mode .context-menu-item { color:#52665a; }
+        body.workflow-mode .context-menu-item:hover { background:#edf3ef; }
+        body.workflow-mode .context-menu-divider { background:#e5ece6; }
+        body.workflow-mode .rename-dialog { background:#fffefa; color:#465b4e; }
+        body.workflow-mode .rename-dialog h2 { color:#465b4e; }
+        body.workflow-mode .rename-dialog input { background:#fbfdfb; color:#465b4e; border-color:#dce8e1; }
+        body.workflow-mode .rename-dialog input:focus { border-color:#9bb6a5; box-shadow:0 0 0 3px rgba(142,175,160,.16); }
+        /* 工作流简约模式：保留淡雅底色，减少卡片、圆角与阴影 */
+        body.workflow-mode .toolbar { box-shadow:none; }
+        body.workflow-mode .workspace-switcher { gap:0; padding-left:22px; padding-right:22px; }
+        body.workflow-mode .workspace-switch { min-height:42px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+        body.workflow-mode .workspace-switch.active { background:transparent; color:#527562; box-shadow:inset 0 -2px #8eafa0; }
+        body.workflow-mode .app-container { background:#f5f7f4; }
+        body.workflow-mode .docs-sidebar { background:transparent; }
+        body.workflow-mode .doc-item { margin:1px 0; padding:9px 8px; border-radius:5px; }
+        body.workflow-mode .doc-item.active { background:#e9efea; box-shadow:inset 2px 0 #8eafa0; }
+        body.workflow-mode .main-doc-area { border-radius:8px; box-shadow:none; }
+        body.workflow-mode .section-header { padding:13px 16px; border-bottom-width:1px; background:transparent; }
+        body.workflow-mode .section-header button { background:transparent; }
+        body.workflow-mode .doc-block { border-radius:0; }
+        body.workflow-mode .doc-block:hover { background:transparent; }
+        body.workflow-mode .block-header { padding-left:2px; padding-right:2px; }
+        body.workflow-mode .block-content { padding-left:8px; padding-right:8px; }
+        body.workflow-mode .block-actions button { border-radius:5px; }
+        body.workflow-mode .rename-dialog { border-radius:10px; box-shadow:0 8px 24px rgba(65,92,73,.12); }
+        @media(max-width:620px) {
+          body.workflow-mode .workspace-switcher { padding-left:10px; padding-right:10px; }
+          body.workflow-mode .main-doc-area { border-radius:8px; }
+        }
+        /* 工作流黑白简约主题 */
+        body.workflow-mode { background:#f5f5f5; color:#222; }
+        body.workflow-mode .toolbar { background:#fff; border-bottom-color:#e8e8e8; }
+        body.workflow-mode .workspace-switcher { background:#f5f5f5; }
+        body.workflow-mode .workspace-switch { color:#777; }
+        body.workflow-mode .workspace-switch:hover { background:#f0f0f0; color:#222; }
+        body.workflow-mode .workspace-switch.active { color:#111; box-shadow:inset 0 -2px #222; }
+        body.workflow-mode .tool-group label,
+        body.workflow-mode .toolbar > div:last-child { color:#888 !important; }
+        body.workflow-mode .separator { background:#e7e7e7; }
+        body.workflow-mode select,
+        body.workflow-mode .toolbar .toolbar-action { border-color:#e5e5e5; background:#f5f5f5; color:#444; }
+        body.workflow-mode select:hover,
+        body.workflow-mode .toolbar .toolbar-action:hover { background:#eaeaea; color:#111; }
+        body.workflow-mode .btn-primary,
+        body.workflow-mode .toolbar .style-toggle[aria-pressed="true"] { border-color:#333; background:#333; color:#fff; box-shadow:none; }
+        body.workflow-mode .app-container { background:#f5f5f5; }
+        body.workflow-mode .doc-item:hover { background:#ededed; }
+        body.workflow-mode .doc-item.active { background:#ebebeb; color:#222; box-shadow:inset 2px 0 #555; }
+        body.workflow-mode .doc-title,
+        body.workflow-mode .doc-item.active .doc-title { color:#333; }
+        body.workflow-mode .main-doc-area { background:#fff; }
+        body.workflow-mode .section-header { color:#222; border-color:#e8e8e8; }
+        body.workflow-mode .section-header button { color:#555; }
+        body.workflow-mode .section-header button:hover { background:#eee; color:#111; }
+        body.workflow-mode .doc-block { border-color:#e8e8e8; }
+        body.workflow-mode .doc-block.locked,
+        body.workflow-mode .doc-block.locked .block-content { background:#f7f7f7; }
+        body.workflow-mode .block-title,
+        body.workflow-mode .block-title .block-name { color:#444; }
+        body.workflow-mode .block-title .block-name:focus { border-color:#999; color:#111; }
+        body.workflow-mode .block-actions button { color:#777; }
+        body.workflow-mode .block-actions button:hover { background:#eee; color:#111; }
+        body.workflow-mode .block-content { color:#333; }
+        body.workflow-mode .toast-message { background:#333; color:#fff; border-color:#555; }
+        body.workflow-mode .context-menu { border-color:#e5e5e5; }
+        body.workflow-mode .context-menu-item { color:#333; }
+        body.workflow-mode .context-menu-item:hover { background:#f0f0f0; }
+        body.workflow-mode .context-menu-divider { background:#e8e8e8; }
+        body.workflow-mode .rename-dialog h2 { color:#222; }
+        body.workflow-mode .rename-dialog input:focus { border-color:#777; box-shadow:0 0 0 2px rgba(0,0,0,.08); }
+    </style>
+</head>
+<body>
+<!-- 自定义右键菜单 -->
+<div id="contextMenu" class="context-menu">
+    <div class="context-menu-item" data-action="rename">
+        <span class="icon">✏️</span> 重命名
+    </div>
+    <div class="context-menu-item" data-action="move-category">
+        <span class="icon">📁</span> 移至分类
+    </div>
+    <div class="context-menu-item" data-action="delete">
+        <span class="icon">🗑</span> 删除文档
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="duplicate">
+        <span class="icon">📋</span> 复制文档
+    </div>
+</div>
+
+<div class="workspace-switcher" role="tablist" aria-label="文档工具切换">
+    <button id="simpleWorkspaceBtn" class="workspace-switch" type="button" role="tab" aria-selected="false">工作流</button>
+    <button id="categorizedWorkspaceBtn" class="workspace-switch active" type="button" role="tab" aria-selected="true">文档记录</button>
+</div>
+
+<div class="toolbar">
+    <div class="tool-group">
+        <select id="fontFamilySelect" aria-label="字体" title="字体">
+            <option value="system-ui">默认字体</option>
+            <option value="Microsoft YaHei">微软雅黑</option>
+            <option value="SimSun">宋体</option>
+            <option value="FangSong">仿宋</option>
+            <option value="KaiTi">楷体</option>
+            <option value="SimHei">黑体</option>
+            <option value="Arial">Arial</option>
+        </select>
+        <select id="fontSizeSelect" aria-label="字号" title="字号">
+            <option value="1">10</option>
+            <option value="2">12</option>
+            <option value="3" selected>14</option>
+            <option value="4">16</option>
+            <option value="5">18</option>
+            <option value="6">24</option>
+            <option value="7">32</option>
+        </select>
+        <button id="unifiedTextStyleBtn" class="toolbar-action style-toggle" type="button" aria-pressed="false" title="按设定整理所有文档块标题和正文的字体与字号">一键整理字体</button>
+        <button id="boldBtn" style="font-weight:600;">B</button>
+        <button id="underlineBtn" class="btn-underline">U</button>
+        <button id="colorOrangeBtn" class="color-orange">橙</button>
+        <button id="colorBlueBtn" class="color-blue">蓝</button>
+        <button id="colorBlackBtn" class="color-black">黑</button>
+        <button id="colorDeepPurpleBtn" class="color-deep-purple">紫</button>
+    </div>
+    <div class="separator"></div>
+    <div class="tool-group">
+        <button id="copyAllBtn" class="toolbar-action">复制主文档</button>
+    </div>
+    <div class="tool-group">
+        <button id="backupBtn" class="toolbar-action">备份数据</button>
+        <button id="importBtn" class="toolbar-action">导入数据</button>
+        <button id="saveManualBtn" class="toolbar-action">手动保存</button>
+    </div>
+    <div style="font-size:11px; color:#64748b;">块内容可编辑字体与字号 · 支持拖拽排序 · 自动保存</div>
+</div>
+
+<div class="app-container" id="appContainer">
+    <div class="category-sidebar"><div class="sidebar-header category-sidebar-header"><button id="addCategoryBtn" class="add-doc-btn" type="button" title="新建分类">+ 新建分类</button></div><div class="categories-list" id="categoriesListContainer"></div></div>
+    <div class="docs-sidebar">
+        <div class="sidebar-header">
+            <button id="addDocBtn" class="add-doc-btn">+ 新建文档</button>
+        </div>
+        <div class="docs-list" id="docsListContainer"></div>
+    </div>
+    <div class="right-workspace">
+        <div class="main-doc-area">
+            <div class="section-header">
+                <span id="mainDocCaption">📄 主文档</span>
+                <div><button id="toggleMainLock" title="锁定/解锁整个主文档">🔓</button><button id="addMainBlockBtn" style="margin-left:6px;">+ 块</button></div>
+            </div>
+            <div id="mainBlocksContainer" class="blocks-container"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- 数据模型 ----------
+    const LEGACY_STORAGE_KEY = 'multiDocManager_flat_v8';
+    const STORAGE_KEYS = { simple: 'multiDocManager_simple_v1', categorized: 'multiDocManager_categorized_v1' };
+    let workspaceMode = localStorage.getItem('multiDocManager_workspace_mode') === 'simple' ? 'simple' : 'categorized';
+    let STORAGE_KEY = STORAGE_KEYS[workspaceMode];
+    let documents = [];
+    let categories = [];
+    let currentCategoryId = null;
+    let currentDocId = null;
+    let autoSaveTimer = null;
+    let blockDragSrcIndex = null;
+    let contextMenuTargetDocId = null;
+
+    function generateId() { return Date.now() + '-' + Math.random().toString(36).substr(2, 8); }
+    function createBlock(content = "", title = "", collapsed = false, locked = false) {
+        return { id: generateId(), content, title, collapsed, locked };
+    }
+    function createCategory(name) { return { id: generateId(), name }; }
+    function createDocument(title, mainBlocks = [], categoryId = null) {
+        if (mainBlocks.length === 0) mainBlocks = [createBlock("", "块")];
+        return { id: generateId(), title, mainBlocks, categoryId, mainLocked: false };
+    }
+
+    function normalizeCategoryData() {
+        if (!Array.isArray(categories)) categories = [];
+        categories = categories.filter(c => c && c.name).map(c => ({ id: c.id || generateId(), name: String(c.name) }));
+        if (!categories.length) categories = [createCategory("默认分类")];
+        const validIds = new Set(categories.map(c => c.id));
+        documents.forEach(doc => { if (!validIds.has(doc.categoryId)) doc.categoryId = categories[0].id; });
+        const activeDoc = documents.find(doc => doc.id === currentDocId);
+        if (activeDoc) currentCategoryId = activeDoc.categoryId;
+        if (!validIds.has(currentCategoryId)) currentCategoryId = categories[0].id;
+        if (!activeDoc || activeDoc.categoryId !== currentCategoryId) currentDocId = documents.find(doc => doc.categoryId === currentCategoryId)?.id || null;
+    }
+
+    function initializeWorkspaceStores() {
+        const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (!legacy) return;
+        if (!localStorage.getItem(STORAGE_KEYS.categorized)) localStorage.setItem(STORAGE_KEYS.categorized, legacy);
+        if (!localStorage.getItem(STORAGE_KEYS.simple)) localStorage.setItem(STORAGE_KEYS.simple, legacy);
+    }
+
+    function normalizeEditorHtml(html = '') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        wrapper.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
+        return wrapper.innerHTML;
+    }
+
+    function normalizeDocuments() {
+        documents.forEach(doc => {
+            delete doc.styles;
+            if (!Array.isArray(doc.mainBlocks)) doc.mainBlocks = [createBlock("", "块")];
+            if (doc.mainLocked === undefined) doc.mainLocked = false;
+            doc.mainBlocks.forEach(block => {
+                if (block.collapsed === undefined) block.collapsed = false;
+                if (block.locked === undefined) block.locked = false;
+                if (block.title === undefined) block.title = "";
+                block.content = normalizeEditorHtml(block.content || '');
+            });
+        });
+        normalizeCategoryData();
+    }
+
+    function migrateOldData(data) {
+        if (data.groups && Array.isArray(data.groups)) {
+            categories = data.groups.map((group, index) => ({ id: group.id || generateId(), name: group.name || group.title || `分类 ${index + 1}` }));
+            return data.groups.flatMap((group, index) => (group.documents || []).map(doc => ({ ...doc, categoryId: categories[index].id })));
+        }
+        return data.documents || [];
+    }
+
+    function initDefaultDocs() {
+        categories = [createCategory("默认分类")];
+        return [
+            createDocument("计划模板", [createBlock("", "计划详情")], categories[0].id),
+            createDocument("提示词示例", [createBlock("", "提示词1")], categories[0].id),
+            createDocument("学习笔记", [createBlock("", "React基础")], categories[0].id)
+        ];
+    }
+
+    function saveToLocalStorage(showMsg = false) {
+        try {
+            syncCurrentDocFromUI();
+            normalizeCategoryData();
+        const data = { documents, categories, currentCategoryId, currentDocId, version: 9 };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            if (showMsg) showToast("✓ 已保存", 1200);
+        } catch(e) { console.warn(e); if(showMsg) showToast("保存失败",1200); }
+    }
+
+    function loadFromLocalStorage() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        try {
+            const data = JSON.parse(raw);
+            if ((data.version === 8 || data.version === 9) && data.documents) {
+                documents = data.documents;
+                categories = data.categories || [];
+                currentCategoryId = data.currentCategoryId || null;
+                currentDocId = data.currentDocId || (documents[0]?.id || null);
+                normalizeDocuments();
+                return true;
+            } else if (data.groups) {
+                const allDocs = migrateOldData(data);
+                documents = allDocs;
+                currentDocId = data.currentDocId || (documents[0]?.id || null);
+                normalizeDocuments();
+                return true;
+            }
+        } catch(e) {}
+        return false;
+    }
+
+    function manualSave() { saveToLocalStorage(true); }
+    function startAutoSave() {
+        if (autoSaveTimer) clearInterval(autoSaveTimer);
+        autoSaveTimer = setInterval(() => { syncCurrentDocFromUI(); saveToLocalStorage(false); }, 30000);
+    }
+
+    function syncCurrentDocFromUI() {
+        if (!currentDocId) return;
+        const doc = documents.find(d => d.id === currentDocId);
+        if (!doc) return;
+        const container = document.getElementById('mainBlocksContainer');
+        if (container) {
+            const blocks = container.querySelectorAll('.doc-block');
+            doc.mainBlocks = Array.from(blocks).map(block => ({
+                id: block.dataset.id,
+                content: normalizeEditorHtml(block.querySelector('.block-content').innerHTML),
+                title: block.querySelector('.block-name').innerText,
+                collapsed: block.classList.contains('collapsed'),
+                locked: block.classList.contains('locked')
+            }));
+        }
+        doc.mainLocked = document.getElementById('toggleMainLock').textContent === '🔒';
+    }
+
+    function getCurrentDocument() { return documents.find(d => d.id === currentDocId) || null; }
+
+    // 渲染主文档块
+    function renderMainBlocks(blocks) {
+        const container = document.getElementById('mainBlocksContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        const doc = getCurrentDocument();
+        const isMainLocked = doc ? doc.mainLocked : false;
+        blocks.forEach((block, idx) => {
+            const blockDiv = document.createElement('div');
+            blockDiv.className = `doc-block ${block.collapsed ? 'collapsed' : ''} ${block.locked ? 'locked' : ''}`;
+            blockDiv.dataset.id = block.id;
+            blockDiv.dataset.index = idx;
+            const header = document.createElement('div');
+            header.className = 'block-header';
+            header.innerHTML = `
+                <div class="drag-handle" draggable="true" title="拖动调整顺序">☰</div>
+                <div class="block-title">
+                    <span class="block-name" contenteditable="true">${escapeHtml(block.title || '')}</span>
+                </div>
+                <div class="block-actions">
+                    <button class="toggle-collapse">${block.collapsed ? '▶' : '▼'}</button>
+                    <button class="lock-block">${block.locked ? '🔒' : '🔓'}</button>
+                    <button class="delete-block">🗑</button>
+                </div>
+            `;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'block-content';
+            contentDiv.contentEditable = (!block.locked && !isMainLocked).toString();
+            block.content = normalizeEditorHtml(block.content || '');
+            contentDiv.innerHTML = block.content;
+            contentDiv.addEventListener('input', () => { syncCurrentDocFromUI(); saveToLocalStorage(false); });
+            contentDiv.addEventListener('focus', () => { activeEditorElement = contentDiv; });
+            const blockNameSpan = header.querySelector('.block-name');
+            blockNameSpan.addEventListener('blur', () => {
+                const newTitle = blockNameSpan.innerText.trim();
+                if (newTitle !== block.title) {
+                    block.title = newTitle;
+                    syncCurrentDocFromUI();
+                    saveToLocalStorage(false);
+                }
+            });
+            blockNameSpan.addEventListener('click', e => e.stopPropagation());
+            blockDiv.appendChild(header);
+            blockDiv.appendChild(contentDiv);
+            // 按钮事件
+            const toggleBtn = header.querySelector('.toggle-collapse');
+            toggleBtn.onclick = (e) => {
+                e.stopPropagation();
+                block.collapsed = !block.collapsed;
+                blockDiv.classList.toggle('collapsed');
+                toggleBtn.textContent = block.collapsed ? '▶' : '▼';
+                syncCurrentDocFromUI();
+                saveToLocalStorage(false);
+            };
+            const lockBtn = header.querySelector('.lock-block');
+            lockBtn.onclick = (e) => {
+                e.stopPropagation();
+                block.locked = !block.locked;
+                blockDiv.classList.toggle('locked');
+                lockBtn.textContent = block.locked ? '🔒' : '🔓';
+                contentDiv.contentEditable = (!block.locked && !isMainLocked).toString();
+                syncCurrentDocFromUI();
+                saveToLocalStorage(false);
+                showToast(block.locked ? "块已锁定" : "块已解锁", 1000);
+            };
+            const delBtn = header.querySelector('.delete-block');
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm("删除此块？")) {
+                    const doc = getCurrentDocument();
+                    if (doc) {
+                        doc.mainBlocks = doc.mainBlocks.filter(b => b.id !== block.id);
+                        renderCurrentDocument();
+                        syncCurrentDocFromUI();
+                        saveToLocalStorage(false);
+                        showToast("已删除块", 1000);
+                    }
+                }
+            };
+            // 拖拽手柄
+            const dragHandle = header.querySelector('.drag-handle');
+            dragHandle.addEventListener('dragstart', (e) => {
+                blockDragSrcIndex = idx;
+                e.dataTransfer.setData('text/plain', idx);
+                e.dataTransfer.effectAllowed = 'move';
+                dragHandle.style.opacity = '0.5';
+            });
+            dragHandle.addEventListener('dragend', (e) => {
+                dragHandle.style.opacity = '';
+                document.querySelectorAll('.doc-block').forEach(el => el.classList.remove('drag-over'));
+                blockDragSrcIndex = null;
+            });
+            blockDiv.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const target = e.target.closest('.doc-block');
+                if (target && blockDragSrcIndex !== null) target.classList.add('drag-over');
+            });
+            blockDiv.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetBlock = e.target.closest('.doc-block');
+                if (targetBlock && blockDragSrcIndex !== null) {
+                    const targetIdx = parseInt(targetBlock.dataset.index);
+                    if (blockDragSrcIndex !== targetIdx) {
+                        const [moved] = blocks.splice(blockDragSrcIndex, 1);
+                        blocks.splice(targetIdx, 0, moved);
+                        renderMainBlocks(blocks);
+                        syncCurrentDocFromUI();
+                        saveToLocalStorage(false);
+                        showToast("块顺序已更新", 1000);
+                    }
+                }
+                document.querySelectorAll('.doc-block').forEach(el => el.classList.remove('drag-over'));
+                blockDragSrcIndex = null;
+            });
+            container.appendChild(blockDiv);
+        });
+    }
+
+    function renderCurrentDocument() {
+        const doc = getCurrentDocument();
+        if (!doc) {
+            document.getElementById('mainBlocksContainer').innerHTML = '';
+            document.getElementById('mainDocCaption').textContent = '📄 请选择或新建文档';
+            document.getElementById('toggleMainLock').textContent = '🔓';
+            return;
+        }
+        const category = categories.find(c => c.id === doc.categoryId);
+        document.getElementById('mainDocCaption').textContent = `📄 ${workspaceMode === 'categorized' && category ? category.name + ' / ' : ''}${doc.title}`;
+        renderMainBlocks(doc.mainBlocks);
+        document.getElementById('toggleMainLock').textContent = doc.mainLocked ? '🔒' : '🔓';
+        document.querySelectorAll('#mainBlocksContainer .block-content').forEach(el => {
+            const blockDiv = el.closest('.doc-block');
+            const isBlockLocked = blockDiv.classList.contains('locked');
+            el.contentEditable = (!isBlockLocked && !doc.mainLocked).toString();
+        });
+    }
+
+    // ----- 右键菜单 -----
+    function showContextMenu(e, docId) {
+        e.preventDefault();
+        contextMenuTargetDocId = docId;
+        const menu = document.getElementById('contextMenu');
+        menu.style.display = 'block';
+        let x = e.clientX;
+        let y = e.clientY;
+        const menuWidth = 180;
+        const menuHeight = 180;
+        if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+        if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    function hideContextMenu() {
+        document.getElementById('contextMenu').style.display = 'none';
+        contextMenuTargetDocId = null;
+    }
+
+    function handleContextMenuAction(action) {
+        if (!contextMenuTargetDocId) return;
+        const doc = documents.find(d => d.id === contextMenuTargetDocId);
+        if (!doc) return;
+        const idx = documents.indexOf(doc);
+        
+        switch(action) {
+            case 'rename': {
+                hideContextMenu();
+                const item = Array.from(document.querySelectorAll('#docsListContainer .doc-item')).find(node => node.dataset.id === doc.id);
+                const title = item?.querySelector('.doc-title');
+                if (title) beginInlineNameEdit(title, doc.title, newTitle => {
+                    doc.title = newTitle;
+                    renderDocList();
+                    if (currentDocId === doc.id) renderCurrentDocument();
+                    saveToLocalStorage(false);
+                });
+                return;
+            }
+            case 'delete': {
+                if (documents.length === 1) { 
+                    showToast("至少保留一个文档"); 
+                    break; 
+                }
+                if (!confirm(`确定要删除文档 "${doc.title}" 吗？`)) break;
+                documents.splice(idx, 1);
+                if (currentDocId === doc.id) {
+                    currentDocId = documents.find(item => item.categoryId === currentCategoryId)?.id || null;
+                    renderCurrentDocument();
+                }
+                renderDocList();
+                saveToLocalStorage(false);
+                showToast("已删除文档", 1000);
+                break;
+            }
+            case 'move-category': {
+                if (categories.length < 2) { showToast('请先新建一个分类'); break; }
+                const options = categories.map((category, index) => `${index + 1}. ${category.name}`).join('\n');
+                const choice = Number(prompt(`输入要移入的分类序号：\n${options}`));
+                const destination = categories[choice - 1];
+                if (!destination) { showToast('分类序号无效'); break; }
+                doc.categoryId = destination.id;
+                if (currentDocId === doc.id) currentCategoryId = destination.id;
+                renderCategoryList();
+                renderDocList();
+                renderCurrentDocument();
+                saveToLocalStorage(false);
+                showToast(`已将文档移入：${destination.name}`);
+                break;
+            }
+            case 'duplicate': {
+                const newDoc = JSON.parse(JSON.stringify(doc));
+                newDoc.id = generateId();
+                newDoc.title = doc.title + ' (副本)';
+                documents.push(newDoc);
+                renderDocList();
+                saveToLocalStorage(false);
+                showToast(`已复制文档: ${newDoc.title}`, 1000);
+                break;
+            }
+        }
+        hideContextMenu();
+    }
+
+    // ----- 文档列表渲染（无删除按钮）-----
+    function beginInlineNameEdit(element, oldName, onSave) {
+        if (!element || !element.isConnected) return;
+        const input = document.createElement('input');
+        input.className = 'inline-name-editor';
+        input.type = 'text';
+        input.value = oldName;
+        let finished = false;
+        const finish = commit => {
+            if (finished) return;
+            const newName = input.value.trim();
+            if (commit && newName) {
+                finished = true;
+                onSave(newName);
+                return;
+            }
+            if (commit && !newName) showToast('名称不能为空', 1200);
+            finished = true;
+            input.replaceWith(element);
+        };
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter') { event.preventDefault(); finish(true); }
+            if (event.key === 'Escape') { event.preventDefault(); finish(false); }
+        });
+        input.addEventListener('blur', () => finish(true));
+        input.addEventListener('click', event => event.stopPropagation());
+        element.replaceWith(input);
+        input.focus();
+        input.select();
+    }
+
+    function renderCategoryList() {
+        const container = document.getElementById('categoriesListContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        categories.forEach(category => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = `category-item ${category.id === currentCategoryId ? 'active' : ''}`;
+            item.dataset.id = category.id;
+            item.textContent = category.name;
+            item.title = '单击切换分类，双击直接修改名称，右键删除';
+            item.addEventListener('click', () => {
+                if (category.id === currentCategoryId) return;
+                syncCurrentDocFromUI();
+                currentCategoryId = category.id;
+                container.querySelectorAll('.category-item').forEach(node => node.classList.toggle('active', node.dataset.id === category.id));
+                const docsInCategory = documents.filter(doc => doc.categoryId === category.id);
+                if (!docsInCategory.some(doc => doc.id === currentDocId)) currentDocId = docsInCategory[0]?.id || null;
+                renderDocList();
+                renderCurrentDocument();
+                saveToLocalStorage(false);
+            });
+            item.addEventListener('dblclick', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                beginInlineNameEdit(item, category.name, name => {
+                    category.name = name;
+                    renderCategoryList();
+                    renderCurrentDocument();
+                    saveToLocalStorage(false);
+                });
+            });
+            item.addEventListener('contextmenu', e => {
+                e.preventDefault();
+                if (categories.length < 2) { showToast('至少保留一个分类'); return; }
+                if (!confirm(`删除分类“${category.name}”？其中的文档会移到其他分类。`)) return;
+                const replacement = categories.find(c => c.id !== category.id);
+                documents.forEach(doc => { if (doc.categoryId === category.id) doc.categoryId = replacement.id; });
+                categories = categories.filter(c => c.id !== category.id);
+                if (currentCategoryId === category.id) currentCategoryId = replacement.id;
+                if (!documents.some(doc => doc.id === currentDocId)) currentDocId = documents.find(doc => doc.categoryId === currentCategoryId)?.id || null;
+                renderCategoryList();
+                renderDocList();
+                renderCurrentDocument();
+                saveToLocalStorage(false);
+            });
+            container.appendChild(item);
+        });
+    }
+
+    function addCategory() {
+        syncCurrentDocFromUI();
+        let number = categories.length + 1;
+        while (categories.some(item => item.name === `新分类 ${number}`)) number++;
+        const category = createCategory(`新分类 ${number}`);
+        categories.push(category);
+        currentCategoryId = category.id;
+        currentDocId = null;
+        renderCategoryList();
+        renderDocList();
+        renderCurrentDocument();
+        saveToLocalStorage(false);
+        showToast(`已创建分类：${category.name}`);
+    }
+
+    function renderDocList() {
+        const container = document.getElementById('docsListContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        const visibleDocs = workspaceMode === 'simple' ? documents : documents.filter(doc => doc.categoryId === currentCategoryId);
+        if (!visibleDocs.length) {
+            const empty = document.createElement('div');
+            empty.className = 'category-empty';
+            empty.textContent = '此分类暂无文档';
+            container.appendChild(empty);
+        }
+        visibleDocs.forEach(doc => {
+            const idx = documents.indexOf(doc);
+            const div = document.createElement('div');
+            div.className = `doc-item ${currentDocId === doc.id ? 'active' : ''}`;
+            div.setAttribute('data-id', doc.id);
+            div.setAttribute('data-index', idx);
+            div.setAttribute('draggable', 'true');
+
+            // 文档标题
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'doc-title';
+            titleSpan.textContent = doc.title;
+            titleSpan.title = '单击打开，双击直接修改名称；右键管理';
+
+            // 右键菜单
+            titleSpan.addEventListener('contextmenu', (e) => {
+                e.stopPropagation();
+                showContextMenu(e, doc.id);
+            });
+            div.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showContextMenu(e, doc.id);
+            });
+
+            // 单击选择文档
+            titleSpan.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectDocument(doc.id);
+            });
+            titleSpan.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                beginInlineNameEdit(titleSpan, doc.title, newTitle => {
+                    doc.title = newTitle;
+                    renderDocList();
+                    if (currentDocId === doc.id) renderCurrentDocument();
+                    saveToLocalStorage(false);
+                });
+            });
+
+            div.appendChild(titleSpan);
+
+            // 点击文档项空白区域选择文档
+            div.addEventListener('click', (e) => {
+                if (e.target === div) {
+                    selectDocument(doc.id);
+                }
+            });
+
+            // 拖拽排序
+            div.addEventListener('dragstart', (e) => { 
+                e.dataTransfer.setData('text/plain', idx); 
+                div.style.opacity = '0.5'; 
+            });
+            div.addEventListener('dragend', (e) => { 
+                div.style.opacity = ''; 
+                document.querySelectorAll('.doc-item').forEach(i => i.classList.remove('drag-over')); 
+            });
+            div.addEventListener('dragover', (e) => { 
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = 'move'; 
+                const target = e.target.closest('.doc-item');
+                if (target) target.classList.add('drag-over'); 
+            });
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetIdx = parseInt(e.target.closest('.doc-item')?.getAttribute('data-index'));
+                const srcIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                if (!isNaN(targetIdx) && srcIdx !== targetIdx) {
+                    const [moved] = documents.splice(srcIdx, 1);
+                    documents.splice(targetIdx, 0, moved);
+                    renderDocList();
+                    saveToLocalStorage(false);
+                    showToast('文档顺序已更新', 1000);
+                }
+                document.querySelectorAll('.doc-item').forEach(i => i.classList.remove('drag-over'));
+            });
+            container.appendChild(div);
+        });
+    }
+
+    function addDocument() {
+        const newTitle = `文档 ${documents.length + 1}`;
+        const newDoc = createDocument(newTitle, [createBlock("", "")], currentCategoryId);
+        documents.push(newDoc);
+        renderDocList();
+        selectDocument(newDoc.id);
+        saveToLocalStorage(false);
+        showToast(`已创建: ${newTitle}`);
+    }
+
+    function selectDocument(docId) {
+        if (currentDocId === docId) return;
+        syncCurrentDocFromUI();
+        currentDocId = docId;
+        currentCategoryId = documents.find(doc => doc.id === docId)?.categoryId || currentCategoryId;
+        document.querySelectorAll('#docsListContainer .doc-item').forEach(item => item.classList.toggle('active', item.dataset.id === docId));
+        renderCurrentDocument();
+        applyUnifiedTextStyle(unifiedTextStyle, false);
+        saveToLocalStorage(false);
+    }
+
+    function addMainBlock() {
+        const doc = getCurrentDocument();
+        if (!doc) return;
+        const newTitle = `块 ${doc.mainBlocks.length + 1}`;
+        const newBlock = createBlock("", newTitle);
+        doc.mainBlocks.push(newBlock);
+        renderCurrentDocument();
+        syncCurrentDocFromUI();
+        saveToLocalStorage(false);
+        showToast("已添加新块", 1000);
+    }
+
+    function toggleMainLock() {
+        const doc = getCurrentDocument();
+        if (doc) {
+            doc.mainLocked = !doc.mainLocked;
+            renderCurrentDocument();
+            syncCurrentDocFromUI();
+            saveToLocalStorage(false);
+            showToast(doc.mainLocked ? "主文档已锁定" : "主文档已解锁", 1000);
+        }
+    }
+
+    function copyMainText() {
+        const doc = getCurrentDocument();
+        if (!doc) return;
+        let text = '';
+        doc.mainBlocks.forEach(block => {
+            const title = block.title || "未命名块";
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = block.content;
+            const contentText = tempDiv.innerText.trim();
+            text += `【${title}】\n`;
+            if (contentText) text += contentText + '\n\n';
+            else text += '\n\n';
+        });
+        navigator.clipboard.writeText(text).then(() => showToast("已复制主文档内容（含块标题）", 1500)).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast("已复制主文档内容（含块标题）", 1500);
+        });
+    }
+
+    let activeEditorElement = null;
+    let savedEditorRange = null;
+    document.addEventListener('selectionchange', () => {
+        const selection = window.getSelection();
+        if (!activeEditorElement || !selection || !selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (activeEditorElement.contains(range.startContainer) && activeEditorElement.contains(range.endContainer)) {
+            savedEditorRange = range.cloneRange();
+        }
+    });
+    function execOnActive(cmd, value) {
+        if (activeEditorElement && activeEditorElement.isContentEditable) {
+            activeEditorElement.focus();
+            if (savedEditorRange && activeEditorElement.contains(savedEditorRange.startContainer) && activeEditorElement.contains(savedEditorRange.endContainer)) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(savedEditorRange);
+            }
+            document.execCommand(cmd, false, value);
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount && activeEditorElement.contains(selection.anchorNode)) {
+                savedEditorRange = selection.getRangeAt(0).cloneRange();
+            }
+            syncCurrentDocFromUI();
+            saveToLocalStorage(false);
+        } else {
+            showToast("请先点击要编辑的块内容", 1000);
+        }
+    }
+
+    function showToast(msg, duration=1500) {
+        const t = document.querySelector('.toast-message');
+        if(t) t.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.innerText = msg;
+        document.body.appendChild(toast);
+        setTimeout(()=>toast.remove(), duration);
+    }
+
+    function createDefaultWorkspaceSnapshot() {
+        const category = createCategory("默认分类");
+        const docs = [
+            createDocument("计划模板", [createBlock("", "计划详情")], category.id),
+            createDocument("提示词示例", [createBlock("", "提示词1")], category.id),
+            createDocument("学习笔记", [createBlock("", "React基础")], category.id)
+        ];
+        return { documents: docs, categories: [category], currentCategoryId: category.id, currentDocId: docs[0].id, version: 9 };
+    }
+
+    async function backupData() {
+        saveToLocalStorage(false);
+        initializeWorkspaceStores();
+        const workspaces = {};
+        for (const mode of ['simple', 'categorized']) {
+            const raw = localStorage.getItem(STORAGE_KEYS[mode]);
+            workspaces[mode] = raw ? JSON.parse(raw) : createDefaultWorkspaceSnapshot();
+            if (!raw) localStorage.setItem(STORAGE_KEYS[mode], JSON.stringify(workspaces[mode]));
+        }
+        const data = { format: 'multi-document-workspaces', version: 1, activeWorkspace: workspaceMode, workspaces };
+        const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+        const backupTime = new Date();
+        const backupTimestamp = [backupTime.getFullYear(), String(backupTime.getMonth() + 1).padStart(2, '0'), String(backupTime.getDate()).padStart(2, '0'), '_', String(backupTime.getHours()).padStart(2, '0'), String(backupTime.getMinutes()).padStart(2, '0'), String(backupTime.getSeconds()).padStart(2, '0')].join('');
+        const fileName = `文档记录${backupTimestamp}.json`;
+        try {
+            if (window.showSaveFilePicker) {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{ description: 'JSON 备份文件', accept: { 'application/json': ['.json'] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } else if (window.showDirectoryPicker) {
+                const directory = await window.showDirectoryPicker({ mode: 'readwrite' });
+                const handle = await directory.getFileHandle(fileName, { create: true });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showToast("当前浏览器不支持选择位置，已按默认下载设置保存", 2200);
+                return;
+            }
+            showToast("工作流与文档记录已保存到所选位置", 1800);
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.warn('备份保存失败', err);
+            showToast("保存失败，请检查文件夹权限后重试", 2000);
+        }
+    }
+
+    function importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (data.format === 'multi-document-workspaces' && data.version === 1 && data.workspaces) {
+                        const modes = ['simple', 'categorized'];
+                        const valid = modes.every(mode => {
+                            const workspace = data.workspaces[mode];
+                            return workspace && Array.isArray(workspace.documents) && Array.isArray(workspace.categories);
+                        });
+                        if (!valid) { showToast("无效备份：缺少工作区数据", 1800); return; }
+                        for (const mode of modes) localStorage.setItem(STORAGE_KEYS[mode], JSON.stringify(data.workspaces[mode]));
+                        workspaceMode = modes.includes(data.activeWorkspace) ? data.activeWorkspace : workspaceMode;
+                        STORAGE_KEY = STORAGE_KEYS[workspaceMode];
+                        localStorage.setItem('multiDocManager_workspace_mode', workspaceMode);
+                        documents = [];
+                        categories = [];
+                        currentCategoryId = null;
+                        currentDocId = null;
+                        loadFromLocalStorage();
+                        normalizeDocuments();
+                        updateWorkspaceModeUI();
+                        unifiedTextStyle = readUnifiedTextStyle(workspaceMode);
+                        applyUnifiedTextStyle(unifiedTextStyle, false);
+                        renderCategoryList();
+                        renderDocList();
+                        renderCurrentDocument();
+                        showToast("工作流与文档记录已全部恢复", 1800);
+                    } else if ((data.version === 8 || data.version === 9) && data.documents) {
+                        documents = data.documents;
+                        categories = data.categories || [];
+                        currentCategoryId = data.currentCategoryId || null;
+                        currentDocId = data.currentDocId || (documents[0]?.id || null);
+                        normalizeDocuments();
+                        renderCategoryList();
+                        renderDocList();
+                        renderCurrentDocument();
+                        saveToLocalStorage(false);
+                        showToast("导入成功", 1500);
+                    } else if (data.groups) {
+                        const allDocs = migrateOldData(data);
+                        documents = allDocs;
+                        currentCategoryId = null;
+                        currentDocId = data.currentDocId || (documents[0]?.id || null);
+                        normalizeDocuments();
+                        renderCategoryList();
+                        renderDocList();
+                        renderCurrentDocument();
+                        saveToLocalStorage(false);
+                        showToast("导入成功（旧格式已转换）", 1500);
+                    } else {
+                        showToast("无效备份", 1500);
+                    }
+                } catch(err) { showToast("解析失败", 1500); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    function unifiedTextStyleKey(mode = workspaceMode) { return `workflow-unified-text-style-${mode}`; }
+    function readUnifiedTextStyle(mode = workspaceMode) {
+        const value = localStorage.getItem(unifiedTextStyleKey(mode));
+        return value === null ? localStorage.getItem('workflow-unified-text-style') === '1' : value === '1';
+    }
+    let unifiedTextStyle = readUnifiedTextStyle();
+    function applyUnifiedTextStyle(enabled, notify = true) {
+        unifiedTextStyle = enabled;
+        document.body.classList.toggle('unified-text-style', enabled);
+        localStorage.setItem(unifiedTextStyleKey(), enabled ? '1' : '0');
+        const button = document.getElementById('unifiedTextStyleBtn');
+        if (button) {
+            button.setAttribute('aria-pressed', String(enabled));
+            button.textContent = enabled ? '字体已整理 ✓' : '一键整理字体';
+        }
+        if (notify && enabled) showToast('已将所有标题统一为常规字体 12 号、正文统一为仿宋 14 号', 1500);
+    }
+    function updateWorkspaceModeUI() {
+        const simple = workspaceMode === 'simple';
+        document.getElementById('appContainer').classList.toggle('simple-mode', simple);
+        document.body.classList.toggle('workflow-mode', simple);
+        const simpleButton = document.getElementById('simpleWorkspaceBtn');
+        const categorizedButton = document.getElementById('categorizedWorkspaceBtn');
+        simpleButton.classList.toggle('active', simple);
+        categorizedButton.classList.toggle('active', !simple);
+        simpleButton.setAttribute('aria-selected', String(simple));
+        categorizedButton.setAttribute('aria-selected', String(!simple));
+    }
+
+    function switchWorkspace(mode) {
+        if (mode === workspaceMode) return;
+        saveToLocalStorage(false);
+        workspaceMode = mode;
+        STORAGE_KEY = STORAGE_KEYS[mode];
+        localStorage.setItem('multiDocManager_workspace_mode', mode);
+        documents = [];
+        categories = [];
+        currentCategoryId = null;
+        currentDocId = null;
+        const loaded = loadFromLocalStorage();
+        if (!loaded || !documents.length) {
+            documents = initDefaultDocs();
+            currentCategoryId = categories[0]?.id || null;
+            currentDocId = documents[0]?.id || null;
+        }
+        normalizeCategoryData();
+        updateWorkspaceModeUI();
+        renderCategoryList();
+        renderDocList();
+        renderCurrentDocument();
+        unifiedTextStyle = readUnifiedTextStyle(mode);
+        applyUnifiedTextStyle(unifiedTextStyle, false);
+        saveToLocalStorage(false);
+    }
+
+    function init() {
+        initializeWorkspaceStores();
+        const loaded = loadFromLocalStorage();
+        if (!loaded || !documents.length) {
+            documents = initDefaultDocs();
+            currentDocId = documents[0].id;
+            currentCategoryId = categories[0]?.id || null;
+        }
+        normalizeCategoryData();
+        updateWorkspaceModeUI();
+        renderCategoryList();
+        renderDocList();
+        renderCurrentDocument();
+        applyUnifiedTextStyle(unifiedTextStyle, false);
+        
+        document.getElementById('addDocBtn').addEventListener('click', addDocument);
+        document.getElementById('addCategoryBtn').addEventListener('click', addCategory);
+        document.getElementById('simpleWorkspaceBtn').addEventListener('click', () => switchWorkspace('simple'));
+        document.getElementById('categorizedWorkspaceBtn').addEventListener('click', () => switchWorkspace('categorized'));
+        document.getElementById('toggleMainLock').addEventListener('click', toggleMainLock);
+        document.getElementById('addMainBlockBtn').addEventListener('click', addMainBlock);
+        document.getElementById('copyAllBtn').addEventListener('click', copyMainText);
+        document.getElementById('backupBtn').addEventListener('click', backupData);
+        document.getElementById('importBtn').addEventListener('click', importData);
+        document.getElementById('saveManualBtn').addEventListener('click', manualSave);
+        document.getElementById('boldBtn').addEventListener('click', () => execOnActive('bold'));
+        document.getElementById('underlineBtn').addEventListener('click', () => execOnActive('underline'));
+        document.getElementById('fontFamilySelect').addEventListener('change', e => execOnActive('fontName', e.target.value));
+        document.getElementById('fontSizeSelect').addEventListener('change', e => execOnActive('fontSize', e.target.value));
+        document.getElementById('unifiedTextStyleBtn').addEventListener('click', () => applyUnifiedTextStyle(true));
+        document.getElementById('colorOrangeBtn').addEventListener('click', () => execOnActive('foreColor', '#ad7865'));
+        document.getElementById('colorBlueBtn').addEventListener('click', () => execOnActive('foreColor', '#71899a'));
+        document.getElementById('colorBlackBtn').addEventListener('click', () => execOnActive('foreColor', '#52545a'));
+        document.getElementById('colorDeepPurpleBtn').addEventListener('click', () => execOnActive('foreColor', '#897a96'));
+        // 右键菜单事件
+        document.querySelectorAll('#contextMenu .context-menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleContextMenuAction(item.dataset.action);
+            });
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#contextMenu')) {
+                hideContextMenu();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideContextMenu();
+            }
+        });
+
+        startAutoSave();
+        window.addEventListener('beforeunload', () => { syncCurrentDocFromUI(); saveToLocalStorage(false); });
+    }
+
+    function escapeHtml(str) { return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
+
+    init();
+</script>
+</body>
+</html>
