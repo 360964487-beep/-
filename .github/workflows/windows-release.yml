@@ -1,0 +1,41 @@
+name: Windows Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build Windows application
+        run: npm run package:win
+      - name: Prepare release archive
+        id: archive
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $app = Get-ChildItem dist -Directory | Select-Object -First 1
+          if (-not $app) { throw 'Packaged application directory was not created.' }
+          $archive = "工作流文档-Windows-x64-v$($package.version).zip"
+          Compress-Archive -Path (Join-Path $app.FullName '*') -DestinationPath $archive -Force
+          "version=$($package.version)" >> $env:GITHUB_OUTPUT
+          "archive=$archive" >> $env:GITHUB_OUTPUT
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.archive.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: 工作流文档 v${{ steps.archive.outputs.version }}
+          body: Windows x64 免安装版本。下载 ZIP 后解压并运行应用程序。
+          files: ${{ steps.archive.outputs.archive }}
+          make_latest: true
