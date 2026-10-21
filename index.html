@@ -4,25 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>工作流文档管理</title>
-    <link rel="manifest" href="data:application/manifest+json,{
-        \"name\": \"多文档管理工具\",
-        \"short_name\": \"多文档\",
-        \"start_url\": \".\",
-        \"display\": \"standalone\",
-        \"theme_color\": \"#eeede9\",
-        \"background_color\": \"#eeede9\",
-        \"icons\": [
-            {
-                \"src\": \"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Ctext x='50' y='67' font-size='55' text-anchor='middle' fill='white' font-family='Arial'%3E📄%3C/text%3E%3C/svg%3E\",
-                \"sizes\": \"any\",
-                \"type\": \"image/svg+xml\"
-            }
-        ]
-    }">
+        <link rel="manifest" href="./manifest.webmanifest">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="多文档管理">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233b82f6'/%3E%3Ctext x='50' y='67' font-size='55' text-anchor='middle' fill='white' font-family='Arial'%3E📄%3C/text%3E%3C/svg%3E">
+        <link rel="apple-touch-icon" href="./pwa-icon.svg">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',Roboto,system-ui,sans-serif; background:#f8fafc; color:#0f172a; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
@@ -1393,6 +1379,13 @@
     function escapeHtml(str) { return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
 
     init();
+
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js', { scope: './' })
+                .catch(error => console.warn('离线缓存注册失败', error));
+        });
+    }
 </script>
 </body>
 </html>

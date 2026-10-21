@@ -1,0 +1,18 @@
+{
+  "name": "工作流文档",
+  "short_name": "工作流文档",
+  "description": "工作流与文档管理工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eeede9",
+  "theme_color": "#85899d",
+  "icons": [
+    {
+      "src": "./pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
