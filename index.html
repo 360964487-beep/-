@@ -256,7 +256,7 @@
         }
         .unified-text-style .block-content,
         .unified-text-style .block-content * {
-          font-family:"FangSong", "仿宋_GB2312", STFangsong, serif !important;
+          font-family:"SimHei", "黑体", sans-serif !important;
           font-size:14px !important;
           line-height:1.8 !important;
         }
@@ -1292,7 +1292,7 @@
             button.setAttribute('aria-pressed', String(enabled));
             button.textContent = enabled ? '字体已整理 ✓' : '一键整理字体';
         }
-        if (notify && enabled) showToast('已将所有标题统一为常规字体 12 号、正文统一为仿宋 14 号', 1500);
+        if (notify && enabled) showToast('已将所有标题统一为常规字体 12 号、正文统一为黑体 14 号', 1500);
     }
     function updateWorkspaceModeUI() {
         const simple = workspaceMode === 'simple';
