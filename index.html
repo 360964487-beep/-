@@ -393,7 +393,13 @@
         body.workflow-mode .context-menu-divider { background:#e8e8e8; }
         body.workflow-mode .rename-dialog h2 { color:#222; }
         body.workflow-mode .rename-dialog input:focus { border-color:#777; box-shadow:0 0 0 2px rgba(0,0,0,.08); }
-    </style>
+    
+        #docsListContainer .doc-item { transition:background-color .16s ease,color .16s ease,transform .16s ease; }
+        #docsListContainer .doc-item:active { transform:scale(.985); }
+        @media (prefers-reduced-motion:reduce) {
+          #docsListContainer .doc-item { transition:none; }
+        }
+</style>
 </head>
 <body>
 <!-- 自定义右键菜单 -->
@@ -1039,6 +1045,15 @@
         showToast(`已创建: ${newTitle}`);
     }
 
+    function animateDocumentSwitch() {
+        const container = document.getElementById('mainBlocksContainer');
+        if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        container.animate(
+            [{ opacity: 0.45, transform: 'translateY(5px)' }, { opacity: 1, transform: 'translateY(0)' }],
+            { duration: 180, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' }
+        );
+    }
+
     function selectDocument(docId) {
         if (currentDocId === docId) return;
         syncCurrentDocFromUI();
@@ -1046,6 +1061,7 @@
         currentCategoryId = documents.find(doc => doc.id === docId)?.categoryId || currentCategoryId;
         document.querySelectorAll('#docsListContainer .doc-item').forEach(item => item.classList.toggle('active', item.dataset.id === docId));
         renderCurrentDocument();
+        animateDocumentSwitch();
         applyUnifiedTextStyle(unifiedTextStyle, false);
         saveToLocalStorage(false);
     }
