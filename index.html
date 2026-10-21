@@ -251,8 +251,9 @@
         @media(max-width:800px) { .docs-sidebar { width:126px; flex-basis:126px; } }
         @media(max-width:620px) { .docs-sidebar { width:100%; flex:0 0 auto; } }
         .unified-text-style .block-name {
-          font-family:Arial, sans-serif !important;
-          font-size:12px !important;
+          font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","苹方-简",sans-serif !important;
+          font-size:14px !important;
+          font-weight:700 !important;
         }
         .unified-text-style .block-content,
         .unified-text-style .block-content * {
@@ -1292,7 +1293,7 @@
             button.setAttribute('aria-pressed', String(enabled));
             button.textContent = enabled ? '字体已整理 ✓' : '一键整理字体';
         }
-        if (notify && enabled) showToast('已将所有标题统一为常规字体 12 号、正文统一为苹果黑体（苹方）14 号', 1500);
+        if (notify && enabled) showToast('已将所有标题统一为加粗苹方 14 号、正文统一为苹方 14 号', 1500);
     }
     function updateWorkspaceModeUI() {
         const simple = workspaceMode === 'simple';
