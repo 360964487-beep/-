@@ -439,6 +439,10 @@
         <span class="icon">📋</span> 复制文档
     </div>
 </div>
+<div id="categoryContextMenu" class="context-menu">
+    <div class="context-menu-item" data-category-action="rename"><span class="icon">✏️</span> 重命名分类</div>
+    <div class="context-menu-item" data-category-action="delete"><span class="icon">🗑</span> 删除分类</div>
+</div>
 
 <div class="workspace-switcher" role="tablist" aria-label="文档工具切换">
     <button id="simpleWorkspaceBtn" class="workspace-switch" type="button" role="tab" aria-selected="false">工作流</button>
@@ -517,6 +521,7 @@
     let autoSaveTimer = null;
     let blockDragSrcIndex = null;
     let contextMenuTargetDocId = null;
+    let contextMenuTargetCategoryId = null;
 
     function generateId() { return Date.now() + '-' + Math.random().toString(36).substr(2, 8); }
     function createBlock(content = "", title = "", collapsed = false, locked = false) {
@@ -801,7 +806,50 @@
 
     function hideContextMenu() {
         document.getElementById('contextMenu').style.display = 'none';
+        document.getElementById('categoryContextMenu').style.display = 'none';
         contextMenuTargetDocId = null;
+        contextMenuTargetCategoryId = null;
+    }
+
+    function showCategoryContextMenu(e, categoryId) {
+        e.preventDefault();
+        e.stopPropagation();
+        hideContextMenu();
+        contextMenuTargetCategoryId = categoryId;
+        const menu = document.getElementById('categoryContextMenu');
+        const x = Math.min(e.clientX, window.innerWidth - 190);
+        const y = Math.min(e.clientY, window.innerHeight - 100);
+        menu.style.left = Math.max(8, x) + 'px';
+        menu.style.top = Math.max(8, y) + 'px';
+        menu.style.display = 'block';
+    }
+
+    function handleCategoryContextMenuAction(action) {
+        const category = categories.find(item => item.id === contextMenuTargetCategoryId);
+        if (!category) return hideContextMenu();
+        const item = Array.from(document.querySelectorAll('#categoriesListContainer .category-item')).find(node => node.dataset.id === category.id);
+        hideContextMenu();
+        if (action === 'rename' && item) {
+            beginInlineNameEdit(item, category.name, name => {
+                category.name = name;
+                renderCategoryList();
+                renderCurrentDocument();
+                saveToLocalStorage(false);
+            });
+            return;
+        }
+        if (action !== 'delete') return;
+        if (categories.length < 2) { showToast('至少保留一个分类'); return; }
+        if (!confirm(`删除分类“${category.name}”？其中的文档会移到其他分类。`)) return;
+        const replacement = categories.find(item => item.id !== category.id);
+        documents.forEach(doc => { if (doc.categoryId === category.id) doc.categoryId = replacement.id; });
+        categories = categories.filter(item => item.id !== category.id);
+        if (currentCategoryId === category.id) currentCategoryId = replacement.id;
+        if (!documents.some(doc => doc.id === currentDocId)) currentDocId = documents.find(doc => doc.categoryId === currentCategoryId)?.id || null;
+        renderCategoryList();
+        renderDocList();
+        renderCurrentDocument();
+        saveToLocalStorage(false);
     }
 
     function handleContextMenuAction(action) {
@@ -909,7 +957,7 @@
             item.className = `category-item ${category.id === currentCategoryId ? 'active' : ''}`;
             item.dataset.id = category.id;
             item.textContent = category.name;
-            item.title = '单击切换分类，双击直接修改名称，右键删除';
+            item.title = '单击切换分类，双击直接修改名称，右键重命名或删除';
             item.addEventListener('click', () => {
                 if (category.id === currentCategoryId) return;
                 syncCurrentDocFromUI();
@@ -931,20 +979,7 @@
                     saveToLocalStorage(false);
                 });
             });
-            item.addEventListener('contextmenu', e => {
-                e.preventDefault();
-                if (categories.length < 2) { showToast('至少保留一个分类'); return; }
-                if (!confirm(`删除分类“${category.name}”？其中的文档会移到其他分类。`)) return;
-                const replacement = categories.find(c => c.id !== category.id);
-                documents.forEach(doc => { if (doc.categoryId === category.id) doc.categoryId = replacement.id; });
-                categories = categories.filter(c => c.id !== category.id);
-                if (currentCategoryId === category.id) currentCategoryId = replacement.id;
-                if (!documents.some(doc => doc.id === currentDocId)) currentDocId = documents.find(doc => doc.categoryId === currentCategoryId)?.id || null;
-                renderCategoryList();
-                renderDocList();
-                renderCurrentDocument();
-                saveToLocalStorage(false);
-            });
+            item.addEventListener('contextmenu', e => showCategoryContextMenu(e, category.id));
             container.appendChild(item);
         });
     }
@@ -1080,7 +1115,8 @@
         syncCurrentDocFromUI();
         currentDocId = docId;
         currentCategoryId = documents.find(doc => doc.id === docId)?.categoryId || currentCategoryId;
-        document.querySelectorAll('#docsListContainer .doc-item').forEach(item => item.classList.toggle('active', item.dataset.id === docId));
+        renderCategoryList();
+        renderDocList();
         renderCurrentDocument();
         animateDocumentSwitch();
         applyUnifiedTextStyle(unifiedTextStyle, false);
@@ -1395,8 +1431,15 @@
                 handleContextMenuAction(item.dataset.action);
             });
         });
+        document.querySelectorAll('#categoryContextMenu .context-menu-item').forEach(item => {
+            item.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCategoryContextMenuAction(item.dataset.categoryAction);
+            });
+        });
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#contextMenu')) {
+            if (!e.target.closest('#contextMenu, #categoryContextMenu')) {
                 hideContextMenu();
             }
         });
