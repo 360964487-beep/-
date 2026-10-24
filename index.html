@@ -17,6 +17,7 @@ body[data-theme="dopamine"]{--paper:#fff3fc;--surface:#fffaff;--surface-2:#fbe3f
 body[data-theme="citrus"]{--paper:#f7fbdc;--surface:#fffef3;--surface-2:#edf5bb;--ink:#283017;--muted:#56613a;--line:#37421f;--soft-line:#d9dfb3;--accent:#ff7042;--accent-ink:#283017;--accent-soft:#ffe0d1;--secondary:#d9f249;--tertiary:#16a995;--blue:#3768e8}
 body[data-theme="blueprint"]{--paper:#eaf1ff;--surface:#fcfdff;--surface-2:#dbe9ff;--ink:#172746;--muted:#455978;--line:#243958;--soft-line:#c6d5ed;--accent:#315de8;--accent-ink:#fff;--accent-soft:#dce6ff;--secondary:#ffcc45;--tertiary:#14a995;--blue:#315de8}
 body[data-theme="night"]{color-scheme:dark;--paper:#191526;--surface:#241e33;--surface-2:#30263e;--ink:#fff7ef;--muted:#d2c1d0;--line:#f5d8e8;--soft-line:#4a3a50;--accent:#ff5795;--accent-ink:#251328;--accent-soft:#49253e;--secondary:#f5d64b;--tertiary:#62e2bd;--blue:#82a5ff;--shadow:0 10px 26px rgba(0,0,0,.26);--focus:0 0 0 3px rgba(130,165,255,.4)}
+body[data-theme="monochrome"]{color-scheme:light;--paper:#f2f2f0;--surface:#fff;--surface-2:#e9e9e7;--ink:#171717;--muted:#5d5d5b;--line:#252525;--soft-line:#d2d2d0;--accent:#181818;--accent-ink:#fff;--accent-soft:#ededeb;--secondary:#e2e2e0;--tertiary:#d8d8d6;--blue:#292929;--shadow:0 8px 22px rgba(0,0,0,.07);--focus:0 0 0 3px rgba(20,20,20,.22)}
 ::selection{background:var(--accent);color:var(--accent-ink)}:focus-visible{outline:0;box-shadow:var(--focus)}
 button,select,input{font:inherit;color:inherit}
 button,select{min-height:36px;border:1.5px solid var(--soft-line);border-radius:9px;background:var(--surface);padding:7px 11px;cursor:pointer;transition:transform .16s ease,background-color .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease}
@@ -66,7 +67,30 @@ body[data-theme="night"] .color-orange{background:#573222!important;color:#ffd0b
 .rename-dialog{width:min(420px,calc(100vw - 32px));padding:22px;border:2px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:var(--shadow)}.rename-dialog h2{margin:0 0 14px;font-size:19px;font-weight:850}.rename-dialog input{width:100%;min-height:44px;padding:9px 11px;border:1.5px solid var(--soft-line);border-radius:8px;background:var(--surface);outline:none}.rename-dialog input:focus{border-color:var(--accent);box-shadow:var(--focus)}.rename-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.rename-dialog-actions button{min-width:76px}
 .simple-mode .category-sidebar{display:none}body.workflow-mode .category-sidebar{background:var(--tertiary)}body.workflow-mode .workspace-switch:nth-child(1){background:var(--tertiary);color:#102c27}body.workflow-mode .section-header{background:var(--tertiary);color:#102c27}body.workflow-mode .doc-item.active{background:var(--secondary)}body.workflow-mode .add-doc-btn{background:var(--tertiary);color:#102c27}
 body.workflow-mode[data-theme="night"] .workspace-switch:nth-child(1),body.workflow-mode[data-theme="night"] .section-header,body.workflow-mode[data-theme="night"] .add-doc-btn{color:#18231e}
-@media(max-width:980px){.toolbar>div:last-child{display:none}.category-sidebar{flex-basis:140px}.docs-sidebar{flex-basis:205px}.app-container{gap:10px;padding:10px 14px 14px}.toolbar{padding-left:14px;padding-right:14px}}
+body.workflow-mode[data-theme="monochrome"] .workspace-switch:nth-child(1),body.workflow-mode[data-theme="monochrome"] .section-header,body.workflow-mode[data-theme="monochrome"] .add-doc-btn{color:#171717}
+body[data-theme="monochrome"] .toolbar{border-color:transparent;background:var(--paper)}
+body[data-theme="monochrome"] .tool-group{border-color:transparent;background:transparent}
+body[data-theme="monochrome"] .app-container{gap:12px}
+body[data-theme="monochrome"] .category-sidebar,body[data-theme="monochrome"] .docs-sidebar,body[data-theme="monochrome"] .main-doc-area{border-color:transparent;box-shadow:none}
+body[data-theme="monochrome"] .category-sidebar{background:#e8e8e6}
+body[data-theme="monochrome"] .docs-sidebar{background:transparent}
+body[data-theme="monochrome"] .main-doc-area{background:#fff}
+body[data-theme="monochrome"] .workspace-switch{border-color:transparent;border-radius:0;background:transparent;box-shadow:none}
+body[data-theme="monochrome"] .workspace-switch:nth-child(2){background:transparent}
+body[data-theme="monochrome"] .workspace-switch.active{border-bottom:2px solid var(--ink);background:transparent;color:var(--ink);box-shadow:none;transform:none}
+body[data-theme="monochrome"] .category-item.active{border-color:transparent;background:#fff;box-shadow:none}
+body[data-theme="monochrome"] .doc-item.active{border-color:transparent;background:#e9e9e7;box-shadow:none}
+body[data-theme="monochrome"] .section-header{border-bottom:1px solid #e4e4e2;background:#fff;color:var(--ink)}
+body[data-theme="monochrome"] .doc-block{border-color:transparent;background:transparent}
+body[data-theme="monochrome"] .doc-block.locked{background:#f5f5f3}
+body[data-theme="monochrome"] .block-header{border-bottom:0;border-radius:8px;background:#f2f2f0}
+body[data-theme="monochrome"] .block-actions button:hover,body[data-theme="monochrome"] .section-header button:hover{border-color:transparent;background:#e5e5e3}
+body[data-theme="monochrome"] .context-menu{border-color:#e2e2e0;box-shadow:0 12px 28px rgba(0,0,0,.08)}
+body[data-theme="monochrome"] .add-doc-btn{border-color:transparent;background:#e8e8e6;color:#171717}
+body[data-theme="monochrome"] .add-doc-btn:hover{background:#dededc}
+body[data-theme="monochrome"] .category-sidebar .add-doc-btn{border-color:transparent;background:transparent;color:#171717}
+body[data-theme="monochrome"] .category-sidebar .add-doc-btn{border-color:transparent;background:transparent;color:#171717}
+body[data-theme="monochrome"] .toolbar select{border-color:#e2e2e0;background:#fff}@media(max-width:980px){.toolbar>div:last-child{display:none}.category-sidebar{flex-basis:140px}.docs-sidebar{flex-basis:205px}.app-container{gap:10px;padding:10px 14px 14px}.toolbar{padding-left:14px;padding-right:14px}}
 @media(max-width:760px){
  body{height:100dvh;min-height:100dvh}
  .workspace-switcher{gap:7px;padding:9px 10px 8px}.workspace-switch{flex:1;min-width:0;min-height:42px;padding:6px 10px;font-size:14px}
@@ -146,7 +170,7 @@ body.workflow-mode[data-theme="night"] .workspace-switch:nth-child(1),body.workf
         <button id="colorBlackBtn" class="color-black">黑</button>
         <button id="colorDeepPurpleBtn" class="color-deep-purple">紫</button>
     </div>
-    <div class="tool-group theme-tool-group"><label for="uiThemeSelect">主题</label><select id="uiThemeSelect" aria-label="界面主题"><option value="editorial">编辑部</option><option value="dopamine">多巴胺</option><option value="citrus">柠檬汽水</option><option value="blueprint">蓝晒蓝图</option><option value="night">夜色霓虹</option></select></div>
+    <div class="tool-group theme-tool-group"><label for="uiThemeSelect">主题</label><select id="uiThemeSelect" aria-label="界面主题"><option value="editorial">编辑部</option><option value="dopamine">多巴胺</option><option value="citrus">柠檬汽水</option><option value="blueprint">蓝晒蓝图</option><option value="night">夜色霓虹</option><option value="monochrome">黑白简约</option></select></div>
     <div class="separator"></div>
     <div class="tool-group">
         <button id="copyAllBtn" class="toolbar-action">复制主文档</button>
@@ -1075,7 +1099,7 @@ body.workflow-mode[data-theme="night"] .workspace-switch:nth-child(1),body.workf
     }
 
     const UI_THEME_KEY = 'workflow-ui-theme-v1';
-    const UI_THEME_COLORS = { editorial: '#fff8ef', dopamine: '#fff3fc', citrus: '#f7fbdc', blueprint: '#eaf1ff', night: '#191526' };
+    const UI_THEME_COLORS = { editorial: '#fff8ef', dopamine: '#fff3fc', citrus: '#f7fbdc', blueprint: '#eaf1ff', night: '#191526', monochrome: '#f2f2f0' };
     function applyUITheme(theme) {
         const allowed = Object.prototype.hasOwnProperty.call(UI_THEME_COLORS, theme) ? theme : 'editorial';
         document.body.dataset.theme = allowed;
