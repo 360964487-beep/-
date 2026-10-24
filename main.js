@@ -15,7 +15,7 @@ if (!hasSingleInstanceLock) {
       minWidth: 900,
       minHeight: 600,
       show: false,
-      backgroundColor: '#eeede9',
+      backgroundColor: '#fff8ef',
       autoHideMenuBar: true,
       title: '工作流文档管理',
       webPreferences: {

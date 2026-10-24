@@ -5,443 +5,112 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>工作流文档管理</title>
         <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#fff8ef">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="多文档管理">
         <link rel="apple-touch-icon" href="./pwa-icon.svg">
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',Roboto,system-ui,sans-serif; background:#f8fafc; color:#0f172a; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
-        #instance-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; font-family:'Segoe UI',Roboto,sans-serif; }
-        #instance-overlay .message { background:white; padding:40px 50px; border-radius:20px; max-width:450px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
-        #instance-overlay .message h2 { font-size:22px; margin-bottom:12px; color:#0f172a; }
-        #instance-overlay .message p { font-size:15px; color:#475569; margin-bottom:20px; }
-        #instance-overlay .message .close-btn { background:#3b82f6; color:white; border:none; padding:8px 24px; border-radius:10px; font-size:15px; cursor:pointer; }
-        .toolbar { background:#fff; padding:8px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; border-bottom:1px solid #e2e8f0; z-index:10; }
-        .tool-group { display:flex; align-items:center; gap:8px; background:#f8fafc; padding:4px 10px; border-radius:40px; border:1px solid #e2e8f0; }
-        .tool-group label { font-size:12px; font-weight:500; color:#334155; }
-        select, button { background:white; border:1px solid #cbd5e1; border-radius:8px; padding:4px 10px; font-size:12px; cursor:pointer; font-family:inherit; color:#1e293b; }
-        button { background:#f1f5f9; font-weight:500; }
-        button:active { transform:scale(0.97); }
-        select:hover, button:hover { background:#e2e8f0; border-color:#94a3b8; }
-        .btn-primary { background:#3b82f6; border-color:#3b82f6; color:white; }
-        .btn-primary:hover { background:#2563eb; }
-        .btn-secondary { background:#10b981; border-color:#10b981; color:white; }
-        .btn-secondary:hover { background:#059669; }
-        .color-orange { background:#f97316; border-color:#f97316; color:white; }
-        .color-blue { background:#3b82f6; border-color:#3b82f6; color:white; }
-        .color-black { background:#1e293b; border-color:#1e293b; color:white; }
-        .color-deep-purple { background:#8b5cf6; border-color:#8b5cf6; color:white; }
-        .separator { width:1px; height:24px; background:#e2e8f0; margin:0 4px; }
-        .app-container { display:flex; flex:1; overflow:hidden; padding:16px 20px; gap:20px; }
-        .docs-sidebar { width:300px; background:white; border-radius:20px; display:flex; flex-direction:column; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-        .sidebar-header { padding:12px 14px; border-bottom:1px solid #e2e8f0; display:flex; flex-direction:column; gap:10px; background:#fefefe; }
-        .add-doc-btn { background:#f1f5f9; color:#1e293b; border-color:#cbd5e1; padding:8px; width:100%; text-align:center; }
-        .add-doc-btn:hover { background:#e2e8f0; }
-        .docs-list { flex:1; overflow-y:auto; padding:8px; }
-        .doc-item { background:#fff; margin:6px 4px; padding:6px 10px; border-radius:14px; display:flex; align-items:center; justify-content:space-between; border:1px solid #e2e8f0; cursor:grab; user-select:none; }
-        .doc-item:active { cursor:grabbing; }
-        .doc-item.drag-over { border-top:2px solid #3b82f6; margin-top:-2px; }
-        .doc-item.active { background:#eff6ff; border-color:#3b82f6; }
-        .doc-title { font-weight:400; font-size:11px; flex:1; margin-right:6px; pointer-events:auto; cursor:pointer; color:#0f172a; padding:2px 4px; border-radius:4px; }
-        .doc-title:hover { background:#f1f5f9; }
-        .doc-title .hint { font-weight:400; color:#94a3b8; font-size:10px; margin-left:6px; }
-        .right-workspace { flex:1; display:flex; overflow:hidden; }
-        .main-doc-area { flex:1; background:white; border-radius:20px; display:flex; flex-direction:column; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-        .section-header { padding:10px 16px; background:#fefefe; border-bottom:2px solid #eef2f6; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center; color:#0f172a; }
-        .section-header button { background:none; border:none; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:8px; color:#475569; }
-        .section-header button:hover { background:#e2e8f0; }
-        .blocks-container { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
-        .doc-block { background:#fff; border-radius:12px; border:1px solid #e2e8f0; transition:0.1s; position:relative; user-select:none; }
-        .doc-block.drag-over { border-top:2px solid #3b82f6; margin-top:-2px; }
-        .doc-block.locked { background:#f8fafc; opacity:0.9; }
-        .block-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f9fafb; border-bottom:1px solid #eef2f6; border-radius:12px 12px 0 0; }
-        .drag-handle { cursor:grab; margin-right:8px; font-size:14px; color:#94a3b8; user-select:none; }
-        .drag-handle:active { cursor:grabbing; }
-        .block-title { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:500; color:#1e293b; flex:1; }
-        .block-title .block-name { cursor:text; padding:2px 4px; border-radius:6px; min-width:60px; background:#f9fafb; color:#0f172a; border:1px solid transparent; }
-        .block-title .block-name:focus { background:#fff; outline:none; border-color:#cbd5e1; color:#0f172a; }
-        .block-actions { display:flex; gap:6px; }
-        .block-actions button { background:transparent; border:none; font-size:12px; cursor:pointer; padding:2px 6px; border-radius:8px; color:#64748b; pointer-events:auto; }
-        .block-actions button:hover { background:#e2e8f0; color:#0f172a; }
-        .block-content { padding:12px; outline:none; min-height:80px; color:#0f172a; user-select:text; }
-        .block-content { font-family:inherit; font-size:14px; line-height:1.7; }
-        .block-content font[size="1"] { font-size:10px; }
-        .block-content font[size="2"] { font-size:12px; }
-        .block-content font[size="3"] { font-size:14px; }
-        .block-content font[size="4"] { font-size:16px; }
-        .block-content font[size="5"] { font-size:18px; }
-        .block-content font[size="6"] { font-size:24px; }
-        .block-content font[size="7"] { font-size:32px; }
-        .doc-block.collapsed .block-content { display:none; }
-        .doc-block.locked .block-content { background-color:#f8fafc; cursor:default; }
-        .toast-message { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1e293b; color:#f1f5f9; padding:6px 16px; border-radius:40px; font-size:12px; z-index:999; opacity:0.9; pointer-events:none; border:1px solid #475569; }
-        .btn-underline { text-decoration:underline; text-decoration-color:#8b5cf6; }
-        /* 自定义右键菜单 */
-        .context-menu { position:fixed; background:white; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.15); padding:6px 0; min-width:160px; z-index:10000; display:none; }
-        .context-menu-item { padding:8px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:10px; color:#1e293b; }
-        .context-menu-item:hover { background:#f1f5f9; }
-        .context-menu-item .icon { font-size:16px; }
-        .context-menu-divider { height:1px; background:#e2e8f0; margin:4px 8px; }
-        .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.48); z-index:11000; display:none; align-items:center; justify-content:center; }
-        .rename-dialog { width:min(420px,calc(100vw - 40px)); background:#fff; border-radius:18px; padding:22px; box-shadow:0 24px 70px rgba(15,23,42,0.28); }
-        .rename-dialog h2 { font-size:17px; margin-bottom:14px; }
-        .rename-dialog input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font:14px inherit; outline:none; }
-        .rename-dialog input:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.16); }
-        .rename-dialog-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
-        .rename-dialog-actions button { padding:7px 18px; }
-        @media (max-width:800px) { .app-container { padding:12px; gap:12px; } .docs-sidebar { width:260px; } }
-
-        /* 轻量现代风格：收起多层描边，让文档内容成为视觉主体 */
-        :root { color-scheme:light; --accent:#725cf4; --accent-soft:#efedff; --ink:#28263a; --muted:#8b899b; --line:#eeedf3; }
-        body { background:#f6f5fa; color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; }
-        .toolbar { padding:10px 22px; gap:10px 18px; background:rgba(255,255,255,.94); border-bottom:1px solid #efedf4; box-shadow:0 2px 12px rgba(38,31,74,.035); }
-        .workspace-switcher { display:flex; flex:0 0 auto; gap:8px; padding:10px 22px 0; background:#eeede9; }
-        .workspace-switch { flex:1; min-height:48px; border:1px solid #deddd8; border-radius:12px 12px 0 0; background:#e7e6e1; color:#65666f; font-size:15px; font-weight:600; box-shadow:none; }
-        .workspace-switch:hover { background:#e1e0dc; color:#4d4e56; }
-        .workspace-switch.active { border-color:#85899d; background:#85899d; color:#fff; }
-        .workspace-switch.active:hover { background:#777c91; color:#fff; }
-        .tool-group { gap:6px; background:transparent; padding:0; border:0; }
-        .tool-group label { color:#777589; }
-        .separator { height:20px; background:#e9e7ef; margin:0 2px; }
-        select,button { border:1px solid transparent; border-radius:10px; padding:7px 11px; background:#f3f2f8; color:#555268; transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease; }
-        button { font-weight:500; }
-        select:hover,button:hover { background:#ebe9f4; border-color:transparent; color:#332d55; }
-        .btn-primary { background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 4px 10px rgba(114,92,244,.16); }
-        .btn-primary:hover { background:#6148e5; color:#fff; }
-        .btn-secondary { background:#e9f5f0; color:#397e64; border-color:transparent; }
-        .btn-secondary:hover { background:#dff0e9; color:#286b52; }
-        .color-orange,.color-blue,.color-black,.color-deep-purple { border:0; border-radius:9px; padding:6px 10px; }
-        .color-orange { background:#fff0e5; color:#c66c2f; }
-        .color-orange:hover { background:#ffe5d3; color:#aa5824; }
-        .color-blue { background:#e8f0ff; color:#4474cb; }
-        .color-blue:hover { background:#dce8ff; color:#315fae; }
-        .color-black { background:#efeff2; color:#454451; }
-        .color-black:hover { background:#e5e4e9; color:#292833; }
-        .color-deep-purple { background:#efebff; color:#7558cf; }
-        .color-deep-purple:hover { background:#e5deff; color:#6042bd; }
-        .toolbar > div:last-child { color:#9996a7 !important; font-size:10px !important; }
-        .app-container { padding:18px 22px; gap:22px; }
-        .docs-sidebar { width:258px; flex:0 0 258px; border:0; border-radius:0; background:transparent; box-shadow:none; }
-        .sidebar-header { padding:0 4px 12px; background:transparent; border:0; }
-        .add-doc-btn { width:auto; align-self:flex-start; padding:9px 13px; border:0; border-radius:11px; background:var(--accent); color:#fff; box-shadow:0 5px 12px rgba(114,92,244,.16); }
-        .add-doc-btn:hover { background:#6148e5; color:#fff; }
-        .docs-list { padding:2px 0; }
-        .doc-item { position:relative; margin:3px 0; padding:10px 12px; border:0; border-radius:12px; background:transparent; }
-        .doc-item:hover { background:#eeedf5; }
-        .doc-item.active { background:var(--accent-soft); color:#5543b8; }
-        .doc-title { padding:2px 0; color:#48465b; font-size:13px; }
-        .doc-item.active .doc-title { color:#5745bd; }
-        .doc-title:hover { background:transparent; }
-        .right-workspace { min-width:0; }
-        .main-doc-area { border:0; border-radius:18px; background:#fff; box-shadow:0 12px 36px rgba(39,32,77,.055); }
-        .section-header { padding:15px 20px; background:transparent; border-bottom:1px solid #f0eef5; color:#39364d; font-size:14px; }
-        .section-header button { min-width:34px; background:#f4f3f8; color:#777389; }
-        .section-header button:hover { background:var(--accent-soft); color:#5d49c4; }
-        .blocks-container { padding:10px 24px 22px; gap:0; }
-        .doc-block { border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; transition:background .18s ease; }
-        .doc-block:last-child { border-bottom:0; }
-        .doc-block:hover { background:#fdfcff; }
-        .doc-block.locked { background:#fbfafc; opacity:1; }
-        .block-header { padding:12px 6px 7px; background:transparent; border:0; border-radius:0; }
-        .drag-handle { color:#b1afbd; font-size:13px; }
-        .block-title { gap:6px; color:#777489; }
-        .block-title .block-name { padding:3px 2px; border:0; border-radius:0; border-bottom:1px solid transparent; background:transparent; color:#5a566e; }
-        .block-title .block-name:focus { border-color:#b6aafa; background:transparent; color:#322b52; outline:0; }
-        .block-actions { gap:3px; }
-        .block-actions button { width:30px; height:30px; padding:0; border-radius:9px; color:#8b889a; }
-        .block-actions button:hover { background:#efedff; color:#5d49c4; }
-        .block-content { min-height:68px; padding:8px 12px 18px; border-radius:10px; color:#343143; }
-        .doc-block.locked .block-content { background:#faf9fc; }
-        .toast-message { background:#302b49; border:0; box-shadow:0 8px 24px rgba(38,31,74,.2); }
-        .context-menu { border:1px solid #efedf4; border-radius:14px; box-shadow:0 14px 38px rgba(39,32,77,.14); }
-        .context-menu-item { border-radius:8px; margin:2px 5px; color:#454258; }
-        .context-menu-item:hover { background:#f2f0ff; }
-        .context-menu-divider { background:#efedf4; }
-        .rename-dialog { border-radius:20px; box-shadow:0 24px 70px rgba(39,32,77,.2); }
-        .rename-dialog h2 { color:#39364d; }
-        .rename-dialog input { border-color:#e8e6ef; border-radius:11px; }
-        .rename-dialog input:focus { border-color:#a99af7; box-shadow:0 0 0 3px rgba(114,92,244,.13); }
-        @media(max-width:800px) {
-          .app-container { padding:12px 14px; gap:14px; }
-          .docs-sidebar { width:210px; flex-basis:210px; }
-          .toolbar > div:last-child { display:none; }
-        }
-        @media(max-width:620px) {
-          body { height:100dvh; }
-          .toolbar { padding:8px 10px; gap:7px; }
-          .toolbar .tool-group { flex-wrap:wrap; }
-          .tool-group button { padding:6px 8px; }
-          .app-container { flex-direction:column; padding:10px 10px calc(10px + env(safe-area-inset-bottom)); gap:8px; }
-          .docs-sidebar { width:100%; flex:0 0 auto; max-height:128px; }
-          .sidebar-header { padding:0 2px 5px; }
-          .add-doc-btn { padding:7px 10px; }
-          .docs-list { display:flex; gap:4px; overflow:auto; padding:0 0 5px; }
-          .doc-item { flex:0 0 auto; width:auto; margin:0; padding:8px 11px; }
-          .right-workspace { flex:1; min-height:0; }
-          .main-doc-area { border-radius:15px; }
-          .section-header { padding:12px 14px; }
-          .blocks-container { padding:8px 14px 16px; }
-        }
-                            /* 低饱和莫兰迪主题：灰紫、雾蓝与柔和石色 */
-        :root { color-scheme:light; --accent:#85899d; --accent-soft:#e9e9ed; --ink:#44454b; --muted:#929198; --line:#e9e7e3; }
-        body { background:#eeede9; color:var(--ink); }
-        .toolbar { background:#f8f7f4; border-bottom-color:#e5e3de; box-shadow:0 2px 10px rgba(76,72,62,.045); }
-        .workspace-switcher { background:#eeede9; }
-        .tool-group label, .toolbar > div:last-child { color:#929087 !important; }
-        .separator { background:#e4e1da; }
-        select, button { background:#eae9e4; color:#575851; }
-        select:hover, button:hover { background:#deded7; color:#44463f; }
-        .toolbar select { border:1px solid #deddd6; border-radius:9px; }
-        .toolbar .toolbar-action { min-height:34px; padding:7px 13px; border:0; border-radius:9px; background:#e8e7e1; color:#55564f; box-shadow:none; font-weight:500; }
-        .toolbar .toolbar-action:hover { background:#dcdcd4; color:#41433d; }
-        .btn-primary, .add-doc-btn { background:#85899d; color:#fff; box-shadow:0 3px 8px rgba(94,96,123,.15); }
-        .btn-primary:hover, .add-doc-btn:hover { background:#74798f; color:#fff; }
-        .btn-secondary { background:#e6e6e8; color:#62636b; }
-        .btn-secondary:hover { background:#dcdddf; color:#4d4f57; }
-        .color-orange { background:#eee5df; color:#9b7060; }
-        .color-orange:hover { background:#e7d9d1; color:#865f51; }
-        .color-blue { background:#e2e8eb; color:#647e8e; }
-        .color-blue:hover { background:#d8e1e5; color:#536f80; }
-        .color-black { background:#e6e5e2; color:#555650; }
-        .color-black:hover { background:#dcdbd6; color:#42433e; }
-        .color-deep-purple { background:#e8e3e9; color:#817487; }
-        .color-deep-purple:hover { background:#ded8e1; color:#6f6276; }
-        .docs-sidebar { width:155px; flex:0 0 155px; color:var(--ink); }
-        .doc-item { min-width:0; }
-        .doc-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .doc-item:hover { background:#e9e8e2; }
-        .doc-item.active { background:#e4e4e8; color:#625f78; }
-        .doc-item.active .doc-title { color:#625f78; }
-        .main-doc-area { background:#faf9f6; box-shadow:0 10px 30px rgba(76,72,62,.06); }
-        .section-header { border-color:#ebe8e2; color:#4d4e48; }
-        .section-header button { background:#eae9e4; color:#696a63; }
-        .section-header button:hover { background:#e0e2da; color:#596052; }
-        .doc-block { border-color:#e8e5df; }
-        .doc-block:hover { background:#f6f5f1; }
-        .doc-block.locked { background:#f4f3ef; }
-        .block-title { color:#84847d; }
-        .block-title .block-name { color:#55564f; }
-        .block-title .block-name:focus { border-color:#aeb4a8; color:#41443e; }
-        .block-actions button:hover { background:#e8e9e3; color:#5e675b; }
-        .block-content { color:#484944; }
-        .doc-block.locked .block-content { background:#f4f3ef; }
-        .toast-message { background:#575951; border:0; box-shadow:0 8px 22px rgba(76,72,62,.18); }
-        .context-menu { border-color:#e6e3dc; }
-        .context-menu-item { color:#55564f; }
-        .context-menu-item:hover { background:#eeede8; }
-        .context-menu-divider { background:#e8e5df; }
-        .rename-dialog h2 { color:#4d4e48; }
-        .rename-dialog input { border-color:#dfddd6; }
-        .rename-dialog input:focus { border-color:#a8afa0; box-shadow:0 0 0 3px rgba(133,139,130,.14); }
-        @media(max-width:800px) { .docs-sidebar { width:126px; flex-basis:126px; } }
-        @media(max-width:620px) { .docs-sidebar { width:100%; flex:0 0 auto; } }
-        .unified-text-style .block-name {
-          font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","苹方-简",sans-serif !important;
-          font-size:14px !important;
-          font-weight:700 !important;
-        }
-        .unified-text-style .block-content,
-        .unified-text-style .block-content * {
-          font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","苹方-简",sans-serif !important;
-          font-size:14px !important;
-          line-height:1.8 !important;
-        }
-        .toolbar .style-toggle[aria-pressed="true"] { background:#85899d; color:#fff; }
-        .toolbar .style-toggle[aria-pressed="true"]:hover { background:#74798f; color:#fff; }
-        .category-sidebar { width:126px; flex:0 0 126px; display:flex; flex-direction:column; min-width:0; }
-        .app-container.simple-mode .category-sidebar { display:none; }
-        .category-sidebar-header { padding:0 0 10px; border:0; background:transparent; }
-        .sidebar-header .add-doc-btn { width:100%; min-height:34px; align-self:stretch; padding:7px 8px; border:0; border-radius:9px; background:transparent; color:#73788d; box-shadow:none; font-size:12px; font-weight:500; text-align:center; }
-        .sidebar-header .add-doc-btn:hover { background:transparent; color:#555b73; }
-        .categories-list { display:flex; flex-direction:column; gap:3px; overflow:auto; padding:2px 0; }
-        .category-item { width:100%; min-width:0; padding:9px 10px; border:0; border-radius:10px; background:transparent; color:#696a73; text-align:left; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
-        .category-item:hover { background:#e9e8e2; }
-        .category-item.active { background:#e4e4e8; color:#625f78; }
-        .inline-name-editor { box-sizing:border-box; min-width:0; width:100%; padding:5px 7px; border:1px solid #aeb2c2; border-radius:7px; outline:none; background:#faf9f6; color:#44454b; font:inherit; }
-        .inline-name-editor:focus { box-shadow:0 0 0 2px rgba(133,137,157,.15); }
-        .category-empty { padding:12px 8px; color:#9a9991; font-size:12px; text-align:center; }
-        .docs-sidebar { width:155px; flex:0 0 155px; }
-        @media(max-width:800px) { .category-sidebar { width:105px; flex-basis:105px; } .docs-sidebar { width:126px; flex-basis:126px; } }
-        @media(max-width:620px) {
-          .workspace-switcher { padding:7px 10px 0; gap:6px; }
-          .workspace-switch { min-height:42px; font-size:13px; }
-          .category-sidebar { width:100%; flex:0 0 auto; max-height:66px; }
-          .category-sidebar-header { flex-direction:row; align-items:center; gap:8px; padding:0 2px 4px; }
-          .sidebar-header .add-doc-btn { width:auto; min-height:26px; align-self:auto; padding:4px 8px; }
-          .categories-list { flex-direction:row; gap:4px; overflow:auto; }
-          .category-item { width:auto; flex:0 0 auto; padding:6px 10px; }
-        }
-        /* 工作流空间采用清新淡雅的浅绿与雾白配色 */
-        body.workflow-mode { background:#f2f6f3; color:#3d514a; }
-        body.workflow-mode .toolbar { background:#fbfdfb; border-bottom-color:#e1ebe5; box-shadow:0 2px 12px rgba(57,91,73,.05); }
-        body.workflow-mode .workspace-switcher { background:#f2f6f3; }
-        body.workflow-mode .workspace-switch { border-color:#dce8e1; background:#e8f0eb; color:#71847a; }
-        body.workflow-mode .workspace-switch:hover { background:#dfeae3; color:#4e685a; }
-        body.workflow-mode .workspace-switch.active { border-color:#8eafa0; background:#8eafa0; color:#fff; box-shadow:0 3px 10px rgba(97,139,116,.14); }
-        body.workflow-mode .tool-group label,
-        body.workflow-mode .toolbar > div:last-child { color:#8b9b90 !important; }
-        body.workflow-mode .separator { background:#e2ebe5; }
-        body.workflow-mode select,
-        body.workflow-mode .toolbar .toolbar-action { border-color:#e0e9e3; background:#edf3ef; color:#566e60; }
-        body.workflow-mode select:hover,
-        body.workflow-mode .toolbar .toolbar-action:hover { background:#e2ece5; color:#3d5b49; }
-        body.workflow-mode .btn-primary,
-        body.workflow-mode .toolbar .style-toggle[aria-pressed="true"] { border-color:#8eafa0; background:#8eafa0; color:#fff; box-shadow:0 3px 10px rgba(97,139,116,.14); }
-        body.workflow-mode .app-container { background:radial-gradient(ellipse at 75% 0%,rgba(221,237,226,.48),transparent 48%),#f2f6f3; }
-        body.workflow-mode .docs-sidebar { color:#52665a; }
-        body.workflow-mode .doc-item:hover { background:#e8f0eb; }
-        body.workflow-mode .doc-item.active { background:#e3eee7; color:#527562; box-shadow:inset 2px 0 #8eafa0; }
-        body.workflow-mode .doc-title,
-        body.workflow-mode .doc-item.active .doc-title { color:#52665a; }
-        body.workflow-mode .main-doc-area { background:#fffefa; box-shadow:0 10px 30px rgba(65,92,73,.07); }
-        body.workflow-mode .section-header { color:#465b4e; border-color:#e5ece6; }
-        body.workflow-mode .section-header button { background:#edf3ef; color:#718477; }
-        body.workflow-mode .section-header button:hover { background:#e1ece4; color:#527562; }
-        body.workflow-mode .doc-block { border-color:#e5ece6; }
-        body.workflow-mode .doc-block:hover { background:#fbfdfb; }
-        body.workflow-mode .doc-block.locked,
-        body.workflow-mode .doc-block.locked .block-content { background:#f4f7f3; }
-        body.workflow-mode .block-title { color:#86958a; }
-        body.workflow-mode .block-title .block-name { color:#52665a; }
-        body.workflow-mode .block-title .block-name:focus { border-color:#a8c0b1; color:#3e5e49; }
-        body.workflow-mode .block-actions button { color:#8b9b90; }
-        body.workflow-mode .block-actions button:hover { background:#e8f0eb; color:#527562; }
-        body.workflow-mode .block-content { color:#4b594f; }
-        body.workflow-mode .toast-message { background:#526b5b; color:#fff; border:1px solid #789382; }
-        body.workflow-mode .context-menu { background:#fffefa; border-color:#e3ebe5; }
-        body.workflow-mode .context-menu-item { color:#52665a; }
-        body.workflow-mode .context-menu-item:hover { background:#edf3ef; }
-        body.workflow-mode .context-menu-divider { background:#e5ece6; }
-        body.workflow-mode .rename-dialog { background:#fffefa; color:#465b4e; }
-        body.workflow-mode .rename-dialog h2 { color:#465b4e; }
-        body.workflow-mode .rename-dialog input { background:#fbfdfb; color:#465b4e; border-color:#dce8e1; }
-        body.workflow-mode .rename-dialog input:focus { border-color:#9bb6a5; box-shadow:0 0 0 3px rgba(142,175,160,.16); }
-        /* 工作流简约模式：保留淡雅底色，减少卡片、圆角与阴影 */
-        body.workflow-mode .toolbar { box-shadow:none; }
-        body.workflow-mode .workspace-switcher { gap:0; padding-left:22px; padding-right:22px; }
-        body.workflow-mode .workspace-switch { min-height:42px; border:0; border-radius:0; background:transparent; box-shadow:none; }
-        body.workflow-mode .workspace-switch.active { background:transparent; color:#527562; box-shadow:inset 0 -2px #8eafa0; }
-        body.workflow-mode .app-container { background:#f5f7f4; }
-        body.workflow-mode .docs-sidebar { background:transparent; }
-        body.workflow-mode .doc-item { margin:1px 0; padding:9px 8px; border-radius:5px; }
-        body.workflow-mode .doc-item.active { background:#e9efea; box-shadow:inset 2px 0 #8eafa0; }
-        body.workflow-mode .main-doc-area { border-radius:8px; box-shadow:none; }
-        body.workflow-mode .section-header { padding:13px 16px; border-bottom-width:1px; background:transparent; }
-        body.workflow-mode .section-header button { background:transparent; }
-        body.workflow-mode .doc-block { border-radius:0; }
-        body.workflow-mode .doc-block:hover { background:transparent; }
-        body.workflow-mode .block-header { padding-left:2px; padding-right:2px; }
-        body.workflow-mode .block-content { padding-left:8px; padding-right:8px; }
-        body.workflow-mode .block-actions button { border-radius:5px; }
-        body.workflow-mode .rename-dialog { border-radius:10px; box-shadow:0 8px 24px rgba(65,92,73,.12); }
-        @media(max-width:620px) {
-          body.workflow-mode .workspace-switcher { padding-left:10px; padding-right:10px; }
-          body.workflow-mode .main-doc-area { border-radius:8px; }
-        }
-        /* 工作流黑白简约主题 */
-        body.workflow-mode { background:#f5f5f5; color:#222; }
-        body.workflow-mode .toolbar { background:#fff; border-bottom-color:#e8e8e8; }
-        body.workflow-mode .workspace-switcher { background:#f5f5f5; }
-        body.workflow-mode .workspace-switch { color:#777; }
-        body.workflow-mode .workspace-switch:hover { background:#f0f0f0; color:#222; }
-        body.workflow-mode .workspace-switch.active { color:#111; box-shadow:inset 0 -2px #222; }
-        body.workflow-mode .tool-group label,
-        body.workflow-mode .toolbar > div:last-child { color:#888 !important; }
-        body.workflow-mode .separator { background:#e7e7e7; }
-        body.workflow-mode select,
-        body.workflow-mode .toolbar .toolbar-action { border-color:#e5e5e5; background:#f5f5f5; color:#444; }
-        body.workflow-mode select:hover,
-        body.workflow-mode .toolbar .toolbar-action:hover { background:#eaeaea; color:#111; }
-        body.workflow-mode .btn-primary,
-        body.workflow-mode .toolbar .style-toggle[aria-pressed="true"] { border-color:#333; background:#333; color:#fff; box-shadow:none; }
-        body.workflow-mode .app-container { background:#f5f5f5; }
-        body.workflow-mode .doc-item:hover { background:#ededed; }
-        body.workflow-mode .doc-item.active { background:#ebebeb; color:#222; box-shadow:inset 2px 0 #555; }
-        body.workflow-mode .doc-title,
-        body.workflow-mode .doc-item.active .doc-title { color:#333; }
-        body.workflow-mode .main-doc-area { background:#fff; }
-        body.workflow-mode .section-header { color:#222; border-color:#e8e8e8; }
-        body.workflow-mode .section-header button { color:#555; }
-        body.workflow-mode .section-header button:hover { background:#eee; color:#111; }
-        body.workflow-mode .doc-block { border-color:#e8e8e8; }
-        body.workflow-mode .doc-block.locked,
-        body.workflow-mode .doc-block.locked .block-content { background:#f7f7f7; }
-        body.workflow-mode .block-title,
-        body.workflow-mode .block-title .block-name { color:#444; }
-        body.workflow-mode .block-title .block-name:focus { border-color:#999; color:#111; }
-        body.workflow-mode .block-actions button { color:#777; }
-        body.workflow-mode .block-actions button:hover { background:#eee; color:#111; }
-        body.workflow-mode .block-content { color:#333; }
-        body.workflow-mode .toast-message { background:#333; color:#fff; border-color:#555; }
-        body.workflow-mode .context-menu { border-color:#e5e5e5; }
-        body.workflow-mode .context-menu-item { color:#333; }
-        body.workflow-mode .context-menu-item:hover { background:#f0f0f0; }
-        body.workflow-mode .context-menu-divider { background:#e8e8e8; }
-        body.workflow-mode .rename-dialog h2 { color:#222; }
-        body.workflow-mode .rename-dialog input:focus { border-color:#777; box-shadow:0 0 0 2px rgba(0,0,0,.08); }
-    
-        #docsListContainer .doc-item { transition:background-color .16s ease,color .16s ease,transform .16s ease; }
-        #docsListContainer .doc-item:active { transform:scale(.985); }
-        @media (prefers-reduced-motion:reduce) {
-          #docsListContainer .doc-item { transition:none; }
-        }
-@media(max-width:620px) {
-  body { height:100dvh; min-height:100dvh; }
-  .toolbar { flex:0 0 auto; max-height:66px; flex-wrap:nowrap; gap:6px; padding:6px 8px; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-  .toolbar::-webkit-scrollbar { display:none; }
-  .toolbar .tool-group { flex:0 0 auto; flex-wrap:nowrap; gap:5px; padding:0 2px; }
-  .toolbar .tool-group select { min-height:38px; padding:5px 8px; font-size:14px; }
-  .toolbar .toolbar-action { min-height:40px; padding:6px 10px; white-space:nowrap; }
-  .toolbar .tool-group button:not(.toolbar-action) { min-height:38px; padding:5px 9px; }
-  .toolbar .separator { display:none; }
-  .app-container { display:grid; grid-template-columns:minmax(82px,28vw) minmax(0,1fr); grid-template-rows:58px minmax(0,1fr); flex:1; min-height:0; padding:7px 9px calc(7px + env(safe-area-inset-bottom)); gap:5px; }
-  .category-sidebar { grid-column:1 / -1; grid-row:1; display:flex; flex-direction:row; align-items:center; width:auto; max-height:none; min-width:0; overflow:hidden; }
-  .category-sidebar-header { flex:0 0 auto; gap:6px; padding:0 6px 0 2px; }
-  .category-sidebar-header .add-doc-btn { min-height:38px; }
-  .categories-list, .docs-list { overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-  .categories-list::-webkit-scrollbar, .docs-list::-webkit-scrollbar { display:none; }
-  .categories-list { flex:1; min-width:0; min-height:0; align-items:center; padding-bottom:2px; }
-  .category-item { min-height:38px; max-width:68vw; flex:0 0 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .docs-sidebar { grid-column:1; grid-row:2; width:auto; min-width:0; max-height:none; flex:initial; overflow:hidden; border-right:1px solid #e8e8e8; padding-right:4px; }
-  .docs-sidebar .sidebar-header { flex:0 0 auto; padding:0 2px 6px; }
-  .docs-sidebar .add-doc-btn { width:100%; min-height:40px; padding:5px 3px; font-size:12px; white-space:nowrap; }
-  .docs-list { display:flex; flex:1; min-height:0; flex-direction:column; align-items:stretch; overflow-x:hidden; overflow-y:auto; padding:2px 0; }
-  .doc-item { width:100%; min-width:0; min-height:42px; max-width:none; margin:2px 0; padding:6px 5px; }
-  .doc-title { display:-webkit-box; overflow:hidden; text-overflow:ellipsis; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-  .right-workspace, .main-doc-area { min-height:0; }
-  .right-workspace { grid-column:2; grid-row:2; min-width:0; flex:initial; }
-  .section-header { flex:0 0 auto; gap:8px; padding:9px 11px; }
-  #mainDocCaption { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .blocks-container { min-height:0; padding:6px 11px 14px; overscroll-behavior:contain; }
-  .block-header { gap:4px; padding:8px 3px 5px; }
-  .block-actions { gap:2px; }
-  .block-actions button { width:40px; height:40px; }
-  .rename-dialog { width:calc(100vw - 28px); padding:18px; }
-  .rename-dialog input { min-height:44px; font-size:16px; }
-}
-</style>
+    <style>*{box-sizing:border-box}
+:root{color-scheme:light;--paper:#fff8ef;--surface:#fffdf9;--surface-2:#fff0df;--ink:#281b2b;--muted:#655761;--line:#35253a;--soft-line:#eadbd4;--accent:#ef4f82;--accent-ink:#281b2b;--accent-soft:#ffe0eb;--secondary:#ffca3a;--tertiary:#20b99b;--blue:#396dff;--danger:#d94040;--shadow:0 8px 22px rgba(55,34,45,.09);--font:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;--radius:14px;--focus:0 0 0 3px rgba(57,109,255,.28)}
+body{margin:0;height:100vh;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;transition:background-color .28s ease,color .28s ease;accent-color:var(--accent)}
+body[data-theme="dopamine"]{--paper:#fff3fc;--surface:#fffaff;--surface-2:#fbe3ff;--ink:#281032;--muted:#62416e;--line:#341444;--soft-line:#ebc9f0;--accent:#e936d8;--accent-ink:#281032;--accent-soft:#f9d9f4;--secondary:#ffe43b;--tertiary:#23d5e8;--blue:#414fff}
+body[data-theme="citrus"]{--paper:#f7fbdc;--surface:#fffef3;--surface-2:#edf5bb;--ink:#283017;--muted:#56613a;--line:#37421f;--soft-line:#d9dfb3;--accent:#ff7042;--accent-ink:#283017;--accent-soft:#ffe0d1;--secondary:#d9f249;--tertiary:#16a995;--blue:#3768e8}
+body[data-theme="blueprint"]{--paper:#eaf1ff;--surface:#fcfdff;--surface-2:#dbe9ff;--ink:#172746;--muted:#455978;--line:#243958;--soft-line:#c6d5ed;--accent:#315de8;--accent-ink:#fff;--accent-soft:#dce6ff;--secondary:#ffcc45;--tertiary:#14a995;--blue:#315de8}
+body[data-theme="night"]{color-scheme:dark;--paper:#191526;--surface:#241e33;--surface-2:#30263e;--ink:#fff7ef;--muted:#d2c1d0;--line:#f5d8e8;--soft-line:#4a3a50;--accent:#ff5795;--accent-ink:#251328;--accent-soft:#49253e;--secondary:#f5d64b;--tertiary:#62e2bd;--blue:#82a5ff;--shadow:0 10px 26px rgba(0,0,0,.26);--focus:0 0 0 3px rgba(130,165,255,.4)}
+::selection{background:var(--accent);color:var(--accent-ink)}:focus-visible{outline:0;box-shadow:var(--focus)}
+button,select,input{font:inherit;color:inherit}
+button,select{min-height:36px;border:1.5px solid var(--soft-line);border-radius:9px;background:var(--surface);padding:7px 11px;cursor:pointer;transition:transform .16s ease,background-color .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease}
+button:hover,select:hover{border-color:var(--line);background:var(--surface-2)}button:active{transform:translateY(1px) scale(.985)}button:disabled,select:disabled{opacity:.48;cursor:not-allowed}
+#instance-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(20,12,26,.64);padding:20px}
+#instance-overlay .message{max-width:450px;padding:34px;background:var(--surface);border:2px solid var(--line);border-radius:18px;box-shadow:var(--shadow);text-align:center}
+#instance-overlay .message h2{margin:0 0 12px;font-size:23px;line-height:1.2}#instance-overlay .message p{margin:0 0 20px;color:var(--muted)}
+#instance-overlay .message .close-btn,.btn-primary{background:var(--accent);border-color:var(--line);color:var(--accent-ink);font-weight:750}
+#instance-overlay .message .close-btn:hover,.btn-primary:hover{filter:brightness(.96)}
+.workspace-switcher{z-index:12;display:flex;flex:0 0 auto;gap:10px;padding:14px 22px 10px;background:var(--paper)}
+.workspace-switch{position:relative;min-width:140px;min-height:46px;padding:8px 18px;border:2px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:800;letter-spacing:.01em;box-shadow:0 3px 8px rgba(40,27,43,.13)}
+.workspace-switch:nth-child(2){background:var(--secondary)}.workspace-switch.active{background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 12px rgba(40,27,43,.17);transform:translateY(-1px)}.workspace-switch:hover{filter:saturate(1.15)}
+.toolbar{z-index:10;display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:9px 22px;background:var(--surface);border-top:2px solid var(--line);border-bottom:2px solid var(--line)}
+.tool-group{display:flex;flex:0 0 auto;align-items:center;gap:6px;padding:4px 6px;border:1.5px solid var(--soft-line);border-radius:11px;background:var(--surface)}
+.tool-group label{padding:0 4px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.03em}.toolbar select{max-width:150px;min-height:34px;padding:5px 9px;font-size:12px;font-weight:650}
+.toolbar .toolbar-action{min-height:34px;padding:6px 10px;font-size:12px;font-weight:700}.toolbar .style-toggle[aria-pressed="true"]{background:var(--secondary);border-color:var(--line);color:var(--ink)}
+.toolbar .separator{height:28px;width:2px;background:var(--soft-line)}.toolbar>div:last-child{margin-left:auto;color:var(--muted)!important;font-size:11px!important}
+.color-orange,.color-blue,.color-black,.color-deep-purple{min-width:34px;padding:5px 9px;font-weight:800}.color-orange{background:#ffe1d2!important;color:#8c3517!important}.color-blue{background:#dce6ff!important;color:#2546a1!important}.color-black{background:#302538!important;color:#fff!important}.color-deep-purple{background:#eadcff!important;color:#58358a!important}
+body[data-theme="night"] .color-orange{background:#573222!important;color:#ffd0b9!important}body[data-theme="night"] .color-blue{background:#263a6c!important;color:#dce6ff!important}body[data-theme="night"] .color-black{background:#130f1b!important;color:#fff!important}body[data-theme="night"] .color-deep-purple{background:#402752!important;color:#edd9ff!important}
+.app-container{display:flex;flex:1;min-height:0;overflow:hidden;gap:14px;padding:12px 22px 18px;background:var(--paper)}
+.category-sidebar{display:flex;flex:0 0 164px;flex-direction:column;min-width:0;overflow:hidden;padding:10px 8px;border:2px solid var(--line);border-radius:var(--radius);background:var(--secondary);box-shadow:var(--shadow)}
+.category-sidebar-header{padding:2px 0 8px}.categories-list{display:flex;flex:1;min-height:0;flex-direction:column;gap:5px;overflow-y:auto;padding:0 1px}
+.category-item{position:relative;display:flex;align-items:center;min-height:38px;padding:7px 9px;border:1.5px solid transparent;border-radius:8px;color:var(--ink);font-size:12px;font-weight:700;cursor:pointer;transition:background .18s ease,transform .18s ease}
+.category-item:hover{background:rgba(255,255,255,.55);transform:translateX(2px)}.category-item.active{border-color:var(--line);background:var(--surface);box-shadow:0 3px 8px rgba(40,27,43,.14)}.category-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.category-empty{padding:9px;color:var(--muted);font-size:12px}
+.docs-sidebar{display:flex;flex:0 0 234px;flex-direction:column;min-width:0;overflow:hidden;padding:10px 9px;border:2px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+.sidebar-header{display:flex;flex:0 0 auto;flex-direction:column;gap:8px;padding:0 0 10px;border-bottom:1.5px solid var(--soft-line)}
+.add-doc-btn{min-height:39px;width:100%;padding:7px 10px;border:2px solid var(--line);border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:800;text-align:center}.category-sidebar .add-doc-btn{background:var(--blue);color:#fff}
+.docs-list{flex:1;min-height:0;overflow-y:auto;padding:7px 0}
+.doc-item{display:flex;align-items:center;justify-content:space-between;min-width:0;min-height:40px;margin:4px 0;padding:7px 9px;border:1.5px solid transparent;border-radius:8px;background:transparent;cursor:grab;user-select:none;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.doc-item:active{cursor:grabbing}.doc-item:hover{background:var(--surface-2);transform:translateX(2px)}.doc-item.active{border-color:var(--line);background:var(--accent-soft);box-shadow:0 3px 8px rgba(40,27,43,.12)}
+.doc-item.drag-over,.doc-block.drag-over{outline:2px dashed var(--blue);outline-offset:2px}.doc-title{flex:1;min-width:0;margin-right:6px;padding:2px 1px;border-radius:4px;color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;pointer-events:auto}.doc-title:hover{color:var(--accent)}.doc-title .hint{margin-left:5px;color:var(--muted);font-size:10px}
+.right-workspace{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden}.main-doc-area{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column;overflow:hidden;border:2px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+.section-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:12px;min-height:54px;padding:10px 17px;border-bottom:2px solid var(--line);background:var(--accent);color:var(--accent-ink);font-size:16px;font-weight:850;line-height:1.25}.section-header button{min-width:36px;min-height:34px;padding:5px 9px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-weight:750}.section-header button:hover{background:var(--secondary)}
+.blocks-container{display:flex;flex:1;min-height:0;flex-direction:column;gap:8px;overflow:auto;padding:13px 18px 22px;overscroll-behavior:contain}
+.doc-block{position:relative;border:1.5px solid var(--soft-line);border-radius:10px;background:var(--surface);transition:background-color .2s ease,border-color .2s ease;user-select:none}.doc-block:hover{border-color:var(--line)}.doc-block.locked{background:var(--surface-2)}
+.block-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--soft-line);border-radius:8px 8px 0 0;background:var(--surface-2)}
+.drag-handle{margin-right:7px;color:var(--muted);font-size:14px;cursor:grab;user-select:none}.drag-handle:active{cursor:grabbing}.block-title{display:flex;flex:1;align-items:center;gap:6px;min-width:0;color:var(--muted);font-size:12px;font-weight:750}
+.block-title .block-name{min-width:60px;padding:3px 5px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--ink);cursor:text}.block-title .block-name:focus{border-color:var(--accent);outline:0;background:var(--surface);box-shadow:var(--focus)}
+.block-actions{display:flex;gap:3px}.block-actions button{min-width:34px;width:34px;height:34px;padding:3px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:12px;pointer-events:auto}.block-actions button:hover{border-color:var(--line);background:var(--secondary);color:var(--ink)}
+.block-content{min-height:72px;padding:11px 13px;outline:none;color:var(--ink);font-size:14px;line-height:1.72;user-select:text;overflow-wrap:anywhere}.block-content:focus{caret-color:var(--accent)}.block-content font[size="1"]{font-size:10px}.block-content font[size="2"]{font-size:12px}.block-content font[size="3"]{font-size:14px}.block-content font[size="4"]{font-size:16px}.block-content font[size="5"]{font-size:18px}.block-content font[size="6"]{font-size:24px}.block-content font[size="7"]{font-size:32px}
+.doc-block.collapsed .block-content{display:none}.doc-block.locked .block-content{background:transparent;cursor:default}
+.toast-message{position:fixed;bottom:24px;left:50%;z-index:999;transform:translateX(-50%);padding:9px 16px;border:1.5px solid var(--line);border-radius:9px;background:var(--ink);color:var(--paper);font-size:12px;font-weight:700;box-shadow:var(--shadow);opacity:.96;pointer-events:none}
+.ui-icon{display:inline-block;width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.context-menu .ui-icon{margin-right:2px}.toggle-collapse{position:relative;width:34px;min-width:34px}.toggle-collapse:before{content:"";display:block;width:7px;height:7px;margin:auto;border-right:1.8px solid currentColor;border-bottom:1.8px solid currentColor;transform:translateY(-2px) rotate(45deg)}.toggle-collapse.is-collapsed:before{transform:translateY(2px) rotate(-45deg)}.lock-icon{position:relative;display:block;width:13px;height:10px;margin-top:4px;border:1.6px solid currentColor;border-radius:2px}.lock-icon:before{content:"";position:absolute;left:2px;top:-8px;width:6px;height:7px;border:1.6px solid currentColor;border-bottom:0;border-radius:7px 7px 0 0}.lock-block:not(.is-locked) .lock-icon:before{left:5px;border-left-color:transparent;border-radius:0 7px 0 0}.btn-underline{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+.context-menu{position:fixed;z-index:10000;display:none;min-width:175px;padding:5px;border:1.5px solid var(--line);border-radius:11px;background:var(--surface);box-shadow:var(--shadow)}
+.context-menu-item{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:6px;color:var(--ink);font-size:13px;cursor:pointer}.context-menu-item:hover{background:var(--accent-soft)}.context-menu-item .icon{font-size:15px}.context-menu-divider{height:1px;margin:4px 5px;background:var(--soft-line)}
+.modal-overlay{position:fixed;inset:0;z-index:11000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(22,14,29,.52)}
+.rename-dialog{width:min(420px,calc(100vw - 32px));padding:22px;border:2px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:var(--shadow)}.rename-dialog h2{margin:0 0 14px;font-size:19px;font-weight:850}.rename-dialog input{width:100%;min-height:44px;padding:9px 11px;border:1.5px solid var(--soft-line);border-radius:8px;background:var(--surface);outline:none}.rename-dialog input:focus{border-color:var(--accent);box-shadow:var(--focus)}.rename-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.rename-dialog-actions button{min-width:76px}
+.simple-mode .category-sidebar{display:none}body.workflow-mode .category-sidebar{background:var(--tertiary)}body.workflow-mode .workspace-switch:nth-child(1){background:var(--tertiary);color:#102c27}body.workflow-mode .section-header{background:var(--tertiary);color:#102c27}body.workflow-mode .doc-item.active{background:var(--secondary)}body.workflow-mode .add-doc-btn{background:var(--tertiary);color:#102c27}
+body.workflow-mode[data-theme="night"] .workspace-switch:nth-child(1),body.workflow-mode[data-theme="night"] .section-header,body.workflow-mode[data-theme="night"] .add-doc-btn{color:#18231e}
+@media(max-width:980px){.toolbar>div:last-child{display:none}.category-sidebar{flex-basis:140px}.docs-sidebar{flex-basis:205px}.app-container{gap:10px;padding:10px 14px 14px}.toolbar{padding-left:14px;padding-right:14px}}
+@media(max-width:760px){
+ body{height:100dvh;min-height:100dvh}
+ .workspace-switcher{gap:7px;padding:9px 10px 8px}.workspace-switch{flex:1;min-width:0;min-height:42px;padding:6px 10px;font-size:14px}
+ .toolbar{flex-wrap:nowrap;gap:6px;padding:6px 8px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}.toolbar::-webkit-scrollbar{display:none}.toolbar .tool-group{gap:4px;padding:3px 5px}.toolbar .tool-group select{min-height:38px;max-width:118px;padding:5px 7px;font-size:12px}.toolbar .toolbar-action{min-height:40px;padding:5px 8px;white-space:nowrap}.toolbar .tool-group button:not(.toolbar-action){min-height:38px;padding:5px 8px}.toolbar .separator{display:none}
+ .app-container{display:grid;grid-template-columns:minmax(82px,28vw) minmax(0,1fr);grid-template-rows:54px minmax(0,1fr);flex:1;min-height:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom));gap:6px}
+ .category-sidebar{grid-column:1/-1;grid-row:1;display:flex;flex-direction:row;align-items:center;width:auto;max-height:none;min-width:0;overflow:hidden;padding:5px 7px;border-width:1.5px;border-radius:10px}
+ .category-sidebar-header{flex:0 0 auto;gap:6px;padding:0 6px 0 2px}.category-sidebar-header .add-doc-btn{min-height:38px;width:auto}
+ .categories-list{flex:1;min-width:0;min-height:0;flex-direction:row;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;padding:0 0 2px}
+ .category-item{min-height:36px;max-width:68vw;flex:0 0 auto;overflow:hidden;padding:5px 9px;text-overflow:ellipsis;white-space:nowrap}
+ .docs-sidebar{grid-column:1;grid-row:2;width:auto;min-width:0;max-height:none;flex:initial;overflow:hidden;padding:7px 5px;border-width:1.5px;border-radius:10px}
+ .docs-sidebar .sidebar-header{padding:0 1px 6px}.docs-sidebar .add-doc-btn{width:100%;min-height:40px;padding:5px 3px;font-size:11px;white-space:normal}
+ .docs-list{display:flex;flex:1;min-height:0;flex-direction:column;align-items:stretch;overflow-x:hidden;overflow-y:auto;padding:3px 0}
+ .doc-item{width:100%;min-width:0;min-height:42px;max-width:none;margin:2px 0;padding:6px 5px}
+ .doc-title{display:-webkit-box;overflow:hidden;font-size:10px;line-height:1.3;text-overflow:ellipsis;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+ .right-workspace,.main-doc-area{min-height:0}.right-workspace{grid-column:2;grid-row:2;min-width:0;flex:initial}
+ .section-header{flex:0 0 auto;gap:5px;min-height:46px;padding:7px 8px;font-size:12px}.section-header button{min-width:32px;min-height:36px;padding:4px 6px}
+ #mainDocCaption{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .blocks-container{min-height:0;gap:6px;padding:7px 8px 13px;overscroll-behavior:contain}.block-header{gap:4px;padding:7px 4px}.block-actions{gap:2px}.block-actions button{width:36px;min-width:36px;height:38px}
+ .block-content{min-height:64px;padding:9px 8px;font-size:13px}
+ .rename-dialog{width:calc(100vw - 24px);padding:18px}.rename-dialog input{min-height:44px;font-size:16px}
+ .app-container.simple-mode{grid-template-rows:minmax(0,1fr)}.app-container.simple-mode .docs-sidebar{grid-row:1}.app-container.simple-mode .right-workspace{grid-row:1}
+}@media(max-width:370px){.app-container{grid-template-columns:minmax(74px,28vw) minmax(0,1fr);gap:4px;padding-left:5px;padding-right:5px}.category-sidebar,.docs-sidebar{padding-left:3px;padding-right:3px}.section-header{font-size:11px}.section-header button{min-width:28px;padding:3px 4px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}</style>
 </head>
 <body>
 <!-- 自定义右键菜单 -->
 <div id="contextMenu" class="context-menu">
     <div class="context-menu-item" data-action="rename">
-        <span class="icon">✏️</span> 重命名
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10z"/></svg> 重命名
     </div>
     <div class="context-menu-item" data-action="move-category">
-        <span class="icon">📁</span> 移至分类
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3zM3 7V5h7l2 2"/></svg> 移至分类
     </div>
     <div class="context-menu-item" data-action="delete">
-        <span class="icon">🗑</span> 删除文档
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg> 删除文档
     </div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" data-action="duplicate">
-        <span class="icon">📋</span> 复制文档
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h11v13H8zM5 16H4V3h11v2"/></svg> 复制文档
     </div>
 </div>
 <div id="categoryContextMenu" class="context-menu">
-    <div class="context-menu-item" data-category-action="rename"><span class="icon">✏️</span> 重命名分类</div>
-    <div class="context-menu-item" data-category-action="delete"><span class="icon">🗑</span> 删除分类</div>
+    <div class="context-menu-item" data-category-action="rename"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10z"/></svg> 重命名分类</div>
+    <div class="context-menu-item" data-category-action="delete"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg> 删除分类</div>
 </div>
 
 <div class="workspace-switcher" role="tablist" aria-label="文档工具切换">
@@ -477,6 +146,7 @@
         <button id="colorBlackBtn" class="color-black">黑</button>
         <button id="colorDeepPurpleBtn" class="color-deep-purple">紫</button>
     </div>
+    <div class="tool-group theme-tool-group"><label for="uiThemeSelect">主题</label><select id="uiThemeSelect" aria-label="界面主题"><option value="editorial">编辑部</option><option value="dopamine">多巴胺</option><option value="citrus">柠檬汽水</option><option value="blueprint">蓝晒蓝图</option><option value="night">夜色霓虹</option></select></div>
     <div class="separator"></div>
     <div class="tool-group">
         <button id="copyAllBtn" class="toolbar-action">复制主文档</button>
@@ -500,8 +170,8 @@
     <div class="right-workspace">
         <div class="main-doc-area">
             <div class="section-header">
-                <span id="mainDocCaption">📄 主文档</span>
-                <div><button id="toggleMainLock" title="锁定/解锁整个主文档">🔓</button><button id="addMainBlockBtn" style="margin-left:6px;">+ 块</button></div>
+                <span id="mainDocCaption">主文档</span>
+                <div><button id="toggleMainLock" type="button" title="锁定主文档" aria-label="锁定主文档" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7-2M12 14v3"/></svg></button><button id="addMainBlockBtn" style="margin-left:6px;">+ 块</button></div>
             </div>
             <div id="mainBlocksContainer" class="blocks-container"></div>
         </div>
@@ -645,12 +315,19 @@
                 locked: block.classList.contains('locked')
             }));
         }
-        doc.mainLocked = document.getElementById('toggleMainLock').textContent === '🔒';
+        doc.mainLocked = document.getElementById('toggleMainLock').getAttribute('aria-pressed') === 'true';
     }
 
     function getCurrentDocument() { return documents.find(d => d.id === currentDocId) || null; }
 
     // 渲染主文档块
+    function iconSvg(name) {
+        const paths = {
+            lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
+            unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7-2M12 14v3"/>'
+        };
+        return '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">' + paths[name] + '</svg>';
+    }
     function renderMainBlocks(blocks) {
         const container = document.getElementById('mainBlocksContainer');
         if (!container) return;
@@ -665,14 +342,14 @@
             const header = document.createElement('div');
             header.className = 'block-header';
             header.innerHTML = `
-                <div class="drag-handle" draggable="true" title="拖动调整顺序">☰</div>
+                <div class="drag-handle" draggable="true" title="拖动调整顺序"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h.01M16 6h.01M8 12h.01M16 12h.01M8 18h.01M16 18h.01"/></svg></div>
                 <div class="block-title">
                     <span class="block-name" contenteditable="true">${escapeHtml(block.title || '')}</span>
                 </div>
                 <div class="block-actions">
-                    <button class="toggle-collapse">${block.collapsed ? '▶' : '▼'}</button>
-                    <button class="lock-block">${block.locked ? '🔒' : '🔓'}</button>
-                    <button class="delete-block">🗑</button>
+                    <button class="toggle-collapse ${block.collapsed ? 'is-collapsed' : ''}" type="button" title="${block.collapsed ? '展开' : '收起'}" aria-label="${block.collapsed ? '展开内容' : '收起内容'}"></button>
+                    <button class="lock-block ${block.locked ? 'is-locked' : ''}" type="button" title="${block.locked ? '解锁内容' : '锁定内容'}" aria-label="${block.locked ? '解锁内容' : '锁定内容'}" aria-pressed="${block.locked}"><span class="lock-icon" aria-hidden="true"></span></button>
+                    <button class="delete-block" type="button" title="删除内容块" aria-label="删除内容块"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
                 </div>
             `;
             const contentDiv = document.createElement('div');
@@ -700,7 +377,9 @@
                 e.stopPropagation();
                 block.collapsed = !block.collapsed;
                 blockDiv.classList.toggle('collapsed');
-                toggleBtn.textContent = block.collapsed ? '▶' : '▼';
+                toggleBtn.classList.toggle('is-collapsed', block.collapsed);
+                toggleBtn.title = block.collapsed ? '展开' : '收起';
+                toggleBtn.setAttribute('aria-label', block.collapsed ? '展开内容' : '收起内容');
                 syncCurrentDocFromUI();
                 saveToLocalStorage(false);
             };
@@ -709,7 +388,10 @@
                 e.stopPropagation();
                 block.locked = !block.locked;
                 blockDiv.classList.toggle('locked');
-                lockBtn.textContent = block.locked ? '🔒' : '🔓';
+                lockBtn.classList.toggle('is-locked', block.locked);
+                lockBtn.setAttribute('aria-pressed', String(block.locked));
+                lockBtn.title = block.locked ? '解锁内容' : '锁定内容';
+                lockBtn.setAttribute('aria-label', lockBtn.title);
                 contentDiv.contentEditable = (!block.locked && !isMainLocked).toString();
                 syncCurrentDocFromUI();
                 saveToLocalStorage(false);
@@ -773,14 +455,17 @@
         const doc = getCurrentDocument();
         if (!doc) {
             document.getElementById('mainBlocksContainer').innerHTML = '';
-            document.getElementById('mainDocCaption').textContent = '📄 请选择或新建文档';
-            document.getElementById('toggleMainLock').textContent = '🔓';
+            document.getElementById('mainDocCaption').textContent = '请选择或新建文档';
+            document.getElementById('toggleMainLock').innerHTML = iconSvg('unlock');
+            document.getElementById('toggleMainLock').setAttribute('aria-pressed', 'false');
             return;
         }
         const category = categories.find(c => c.id === doc.categoryId);
-        document.getElementById('mainDocCaption').textContent = `📄 ${workspaceMode === 'categorized' && category ? category.name + ' / ' : ''}${doc.title}`;
+        document.getElementById('mainDocCaption').textContent = `${workspaceMode === 'categorized' && category ? category.name + ' / ' : ''}${doc.title}`;
         renderMainBlocks(doc.mainBlocks);
-        document.getElementById('toggleMainLock').textContent = doc.mainLocked ? '🔒' : '🔓';
+        document.getElementById('toggleMainLock').innerHTML = iconSvg(doc.mainLocked ? 'lock' : 'unlock');
+        document.getElementById('toggleMainLock').setAttribute('aria-pressed', String(doc.mainLocked));
+        document.getElementById('toggleMainLock').title = doc.mainLocked ? '解锁主文档' : '锁定主文档';
         document.querySelectorAll('#mainBlocksContainer .block-content').forEach(el => {
             const blockDiv = el.closest('.doc-block');
             const isBlockLocked = blockDiv.classList.contains('locked');
@@ -857,7 +542,7 @@
         const doc = documents.find(d => d.id === contextMenuTargetDocId);
         if (!doc) return;
         const idx = documents.indexOf(doc);
-        
+
         switch(action) {
             case 'rename': {
                 hideContextMenu();
@@ -872,9 +557,9 @@
                 return;
             }
             case 'delete': {
-                if (documents.length === 1) { 
-                    showToast("至少保留一个文档"); 
-                    break; 
+                if (documents.length === 1) {
+                    showToast("至少保留一个文档");
+                    break;
                 }
                 if (!confirm(`确定要删除文档 "${doc.title}" 吗？`)) break;
                 documents.splice(idx, 1);
@@ -1060,19 +745,19 @@
             });
 
             // 拖拽排序
-            div.addEventListener('dragstart', (e) => { 
-                e.dataTransfer.setData('text/plain', idx); 
-                div.style.opacity = '0.5'; 
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', idx);
+                div.style.opacity = '0.5';
             });
-            div.addEventListener('dragend', (e) => { 
-                div.style.opacity = ''; 
-                document.querySelectorAll('.doc-item').forEach(i => i.classList.remove('drag-over')); 
+            div.addEventListener('dragend', (e) => {
+                div.style.opacity = '';
+                document.querySelectorAll('.doc-item').forEach(i => i.classList.remove('drag-over'));
             });
-            div.addEventListener('dragover', (e) => { 
-                e.preventDefault(); 
-                e.dataTransfer.dropEffect = 'move'; 
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
                 const target = e.target.closest('.doc-item');
-                if (target) target.classList.add('drag-over'); 
+                if (target) target.classList.add('drag-over');
             });
             div.addEventListener('drop', (e) => {
                 e.preventDefault();
@@ -1389,7 +1074,19 @@
         saveToLocalStorage(false);
     }
 
+    const UI_THEME_KEY = 'workflow-ui-theme-v1';
+    const UI_THEME_COLORS = { editorial: '#fff8ef', dopamine: '#fff3fc', citrus: '#f7fbdc', blueprint: '#eaf1ff', night: '#191526' };
+    function applyUITheme(theme) {
+        const allowed = Object.prototype.hasOwnProperty.call(UI_THEME_COLORS, theme) ? theme : 'editorial';
+        document.body.dataset.theme = allowed;
+        localStorage.setItem(UI_THEME_KEY, allowed);
+        const select = document.getElementById('uiThemeSelect');
+        if (select) select.value = allowed;
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.content = UI_THEME_COLORS[allowed];
+    }
     function init() {
+        applyUITheme(localStorage.getItem(UI_THEME_KEY) || 'editorial');
         initializeWorkspaceStores();
         const loaded = loadFromLocalStorage();
         if (!loaded || !documents.length) {
@@ -1403,7 +1100,8 @@
         renderDocList();
         renderCurrentDocument();
         applyUnifiedTextStyle(unifiedTextStyle, false);
-        
+
+        document.getElementById('uiThemeSelect').addEventListener('change', event => applyUITheme(event.target.value));
         document.getElementById('addDocBtn').addEventListener('click', addDocument);
         document.getElementById('addCategoryBtn').addEventListener('click', addCategory);
         document.getElementById('simpleWorkspaceBtn').addEventListener('click', () => switchWorkspace('simple'));

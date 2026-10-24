@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T21:27:47+08:00",
+  "title": "Design System: 工作流文档",
+  "extensions": {
+    "colorMeta": {
+      "editorial-pink": { "role": "primary", "displayName": "珊瑚粉", "canonical": "#ef4f82", "tonalRamp": ["#401020", "#69203a", "#963454", "#bf416b", "#ef4f82", "#f58bab", "#fac0d0", "#fde8ee"] },
+      "editorial-yellow": { "role": "secondary", "displayName": "编辑部明黄", "canonical": "#ffca3a", "tonalRamp": ["#493300", "#725100", "#9b7000", "#c49515", "#ffca3a", "#ffda73", "#ffe9a7", "#fff8dc"] },
+      "editorial-teal": { "role": "tertiary", "displayName": "薄荷青", "canonical": "#20b99b", "tonalRamp": ["#00392f", "#005849", "#087965", "#129a7f", "#20b99b", "#60cbb5", "#9cdece", "#d8f4ed"] },
+      "paper": { "role": "neutral", "displayName": "暖纸白", "canonical": "#fff8ef", "tonalRamp": ["#3d3028", "#66574e", "#8d7e74", "#b9aaa0", "#e0d4ca", "#f0e7df", "#f8f2eb", "#fff8ef"] },
+      "ink": { "role": "neutral", "displayName": "墨紫黑", "canonical": "#281b2b", "tonalRamp": ["#160c18", "#281b2b", "#3e2c42", "#58415c", "#76627a", "#9b8aa0", "#c5b9c8", "#f0e9f1"] }
+    },
+    "shadows": [
+      { "name": "ambient-panel", "value": "0 8px 22px rgba(55,34,45,.09)", "purpose": "Soft lift for persistent workspace panels." },
+      { "name": "active-navigation", "value": "0 6px 12px rgba(40,27,43,.17)", "purpose": "Give the selected workspace tab a gentle lift." }
+    ],
+    "motion": [
+      { "name": "theme-change", "value": "background-color .28s ease, color .28s ease", "purpose": "Ease theme changes without animating document content." },
+      { "name": "control-feedback", "value": "transform .16s ease, background-color .2s ease", "purpose": "Give controls quick tactile feedback." }
+    ],
+    "breakpoints": [
+      { "name": "narrow-layout", "value": "760px" },
+      { "name": "small-phone", "value": "370px" }
+    ]
+  },
+  "components": [
+    { "name": "Primary action", "kind": "button", "refersTo": "button-primary", "description": "Used for creating categories and documents.", "html": "<button class=\"ds-primary\">+ 新建文档</button>", "css": ".ds-primary{min-height:39px;padding:7px 10px;border:2px solid #35253a;border-radius:9px;background:#ef4f82;color:#281b2b;font:800 12px Inter,sans-serif;transition:filter .16s ease,transform .16s ease}.ds-primary:hover{filter:brightness(.96)}.ds-primary:focus-visible{outline:3px solid #396dff;outline-offset:2px}" },
+    { "name": "Workspace navigation", "kind": "nav", "refersTo": "button-primary", "description": "Switches between workflow and categorized documents.", "html": "<button class=\"ds-tab\" aria-selected=\"true\">文档记录</button>", "css": ".ds-tab{min-height:46px;padding:8px 18px;border:2px solid #35253a;border-radius:11px;background:#ef4f82;color:#281b2b;font:800 15px Inter,sans-serif;box-shadow:0 6px 12px rgba(40,27,43,.17)}.ds-tab:focus-visible{outline:3px solid #396dff;outline-offset:2px}" },
+    { "name": "Document list item", "kind": "chip", "refersTo": "button-primary", "description": "Marks the current document in the left rail.", "html": "<button class=\"ds-document\" aria-current=\"page\">计划模板</button>", "css": ".ds-document{padding:7px 9px;border:1.5px solid #35253a;border-radius:8px;background:#ffe0eb;color:#281b2b;font:650 12px Inter,sans-serif}.ds-document:hover{background:#fff0df}.ds-document:focus-visible{outline:3px solid #396dff;outline-offset:2px}" },
+    { "name": "Editor block", "kind": "custom", "refersTo": "editor-surface", "description": "Quiet paper surface for a named editable content block.", "html": "<section class=\"ds-block\"><header>计划详情</header><div contenteditable=\"true\">在这里输入内容</div></section>", "css": ".ds-block{overflow:hidden;border:1.5px solid #eadbd4;border-radius:10px;background:#fffdf9;color:#281b2b}.ds-block header{padding:8px 10px;background:#fff0df;font:750 12px Inter,sans-serif}.ds-block div{min-height:72px;padding:11px 13px;font:14px/1.72 Inter,sans-serif}.ds-block div:focus{outline:3px solid #396dff;outline-offset:-3px}" },
+    { "name": "Theme selector", "kind": "input", "refersTo": "editor-surface", "description": "Changes the application palette and remembers the choice.", "html": "<label class=\"ds-theme\">主题 <select><option>编辑部</option><option>多巴胺</option></select></label>", "css": ".ds-theme{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1.5px solid #eadbd4;border-radius:11px;background:#fffdf9;color:#655761;font:800 11px Inter,sans-serif}.ds-theme select{min-height:34px;padding:5px 9px;border:1px solid #eadbd4;border-radius:9px;background:#fffdf9;color:#281b2b;font:650 12px Inter,sans-serif}.ds-theme select:focus-visible{outline:3px solid #396dff;outline-offset:2px}" }
+  ],
+  "narrative": {
+    "northStar": "彩色编辑部",
+    "overview": "把分类与文档列表组织成编辑部的索引栏，把正文留作清晰、开阔的阅读台。用粗标题、明确边界和成块的颜色让不同工作区域一眼可辨；色彩集中在导航、当前选中项和关键动作，正文保持舒适阅读。\n\n界面提供“编辑部、多巴胺、柠檬汽水、蓝晒蓝图、夜色霓虹”五个主题。选择只影响外观，并保存在当前应用来源的本地偏好中。移动端将分类置于上方，文档标题固定在左栏，正文在右侧。",
+    "keyCharacteristics": ["杂志式的大色块与有力标题。", "正文以浅色纸面承载，鲜色服务于分区和状态。", "浏览器、PWA 与 Electron 共用同一界面规则。"],
+    "rules": [{ "name": "The One Canvas Rule", "body": "每屏只使用当前选择的主题；正文表面保持足够安静，让用户的文档内容优先。", "section": "colors" }],
+    "dos": ["Do use the selected theme tokens across every workspace and transient menu.", "Do keep document text readable against a quiet paper surface.", "Do preserve visible keyboard focus and reduced-motion preferences."],
+    "donts": ["Don't change document data when saving the visual theme preference.", "Don't move the document title list above or below the content on narrow screens.", "Don't mix palettes from different themes in the same view."]
+  }
+}
