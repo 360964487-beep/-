@@ -116,6 +116,12 @@ body[data-theme="monochrome"] .toolbar select{border-color:#e2e2e0;background:#f
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}</style>
 </head>
 <body>
+<div id="instance-overlay" role="alertdialog" aria-modal="true" aria-labelledby="instance-title" style="display:none">
+    <div class="message">
+        <h2 id="instance-title">应用已在另一个窗口打开</h2>
+        <p>为避免文档数据互相覆盖，此窗口已停止运行。请切换到已打开的工作流文档窗口。</p>
+    </div>
+</div>
 <!-- 自定义右键菜单 -->
 <div id="contextMenu" class="context-menu">
     <div class="context-menu-item" data-action="rename">
@@ -1177,7 +1183,99 @@ body[data-theme="monochrome"] .toolbar select{border-color:#e2e2e0;background:#f
 
     function escapeHtml(str) { return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
 
-    init();
+    const SINGLE_WINDOW_LOCK_NAME = 'workflow-document-single-window-v1';
+    const SINGLE_WINDOW_LEASE_KEY = 'workflow-document-single-window-lease-v1';
+    const SINGLE_WINDOW_INSTANCE_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let appInitialized = false;
+    let singleWindowHeartbeat = null;
+
+    function initApplicationOnce() {
+        if (appInitialized) return;
+        appInitialized = true;
+        init();
+    }
+
+    function showDuplicateWindowNotice() {
+        if (appInitialized) {
+            document.querySelectorAll('body > :not(#instance-overlay)').forEach(element => { element.inert = true; });
+        }
+        const overlay = document.getElementById('instance-overlay');
+        if (overlay) overlay.style.display = 'flex';
+    }
+
+    function readSingleWindowLease() {
+        try { return JSON.parse(localStorage.getItem(SINGLE_WINDOW_LEASE_KEY) || 'null'); }
+        catch { return null; }
+    }
+
+    function startLeaseBasedWindowGuard() {
+        const leaseDuration = 6000;
+        const current = readSingleWindowLease();
+        if (current && current.expiresAt > Date.now() && current.instanceId !== SINGLE_WINDOW_INSTANCE_ID) {
+            showDuplicateWindowNotice();
+            return;
+        }
+
+        try {
+            localStorage.setItem(SINGLE_WINDOW_LEASE_KEY, JSON.stringify({ instanceId: SINGLE_WINDOW_INSTANCE_ID, expiresAt: Date.now() + leaseDuration }));
+        } catch (error) {
+            console.warn('无法保存窗口锁，继续打开应用。', error);
+            initApplicationOnce();
+            return;
+        }
+
+        window.setTimeout(() => {
+            const claimed = readSingleWindowLease();
+            if (!claimed || claimed.instanceId !== SINGLE_WINDOW_INSTANCE_ID) {
+                showDuplicateWindowNotice();
+                return;
+            }
+            initApplicationOnce();
+            singleWindowHeartbeat = window.setInterval(() => {
+                const latest = readSingleWindowLease();
+                if (!latest || latest.instanceId !== SINGLE_WINDOW_INSTANCE_ID) {
+                    window.clearInterval(singleWindowHeartbeat);
+                    showDuplicateWindowNotice();
+                    return;
+                }
+                localStorage.setItem(SINGLE_WINDOW_LEASE_KEY, JSON.stringify({ instanceId: SINGLE_WINDOW_INSTANCE_ID, expiresAt: Date.now() + leaseDuration }));
+            }, 2000);
+        }, 120);
+
+        window.addEventListener('storage', event => {
+            if (event.key !== SINGLE_WINDOW_LEASE_KEY || !event.newValue) return;
+            try {
+                const latest = JSON.parse(event.newValue);
+                if (latest.instanceId !== SINGLE_WINDOW_INSTANCE_ID && latest.expiresAt > Date.now()) showDuplicateWindowNotice();
+            } catch { /* Ignore malformed lease updates. */ }
+        });
+
+        window.addEventListener('pagehide', () => {
+            window.clearInterval(singleWindowHeartbeat);
+            const latest = readSingleWindowLease();
+            if (latest?.instanceId === SINGLE_WINDOW_INSTANCE_ID) localStorage.removeItem(SINGLE_WINDOW_LEASE_KEY);
+        }, { once: true });
+    }
+
+    function startSingleWindowGuard() {
+        if (!navigator.locks?.request) {
+            startLeaseBasedWindowGuard();
+            return;
+        }
+        navigator.locks.request(SINGLE_WINDOW_LOCK_NAME, { ifAvailable: true }, async lock => {
+            if (!lock) {
+                showDuplicateWindowNotice();
+                return;
+            }
+            initApplicationOnce();
+            await new Promise(resolve => window.addEventListener('pagehide', resolve, { once: true }));
+        }).catch(error => {
+            console.warn('浏览器窗口锁不可用，切换到备用保护。', error);
+            startLeaseBasedWindowGuard();
+        });
+    }
+
+    startSingleWindowGuard();
 
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
         window.addEventListener('load', () => {
